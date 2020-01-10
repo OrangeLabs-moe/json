@@ -1,0 +1,82 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id "com.github.ben-manes.versions" version "0.27.0"
+    id 'jacoco'
+}
+
+targetCompatibility = '1.8'
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+test {
+    useTestNG()
+    jacoco {
+        enabled = true
+    }
+}
+
+jacocoTestReport {
+    dependsOn test
+}
+
+dependencies {
+    implementation 'org.slf4j:slf4j-api:1.7.26'
+    implementation 'com.google.guava:guava:28.2-jre'
+    implementation 'org.apache.commons:commons-collections4:4.4'
+
+    testImplementation 'org.assertj:assertj-core:3.14.0'
+    testImplementation 'org.slf4j:slf4j-simple:1.7.26'
+    testImplementation 'org.testng:testng:7.1.1'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            group 'moe.orangelabs'
+            artifactId 'json'
+            version System.getenv("GITHUB_REF") == null ?
+                    new Date().getTime() + '-SNAPSHOT' :
+                    System.getenv("GITHUB_REF").split("/").last()
+
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+
+    repositories {
+        maven {
+            System.setProperty("org.gradle.s3.endpoint", "https://maven.orangelabs.moe.storage.yandexcloud.net/")
+            def releasesRepoUrl = "s3://releases"
+            def snapshotsRepoUrl = "s3://snapshots"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials(AwsCredentials) {
+                accessKey System.getenv("AWS_ACCESS_KEY_ID")
+                secretKey System.getenv("AWS_SECRET_ACCESS_KEY")
+            }
+        }
+    }
+}
+
+tasks.withType(PublishToMavenRepository) { it.dependsOn test }
+
+javadoc {
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}

@@ -1,0 +1,18 @@
+on:
+  push:
+    tags:
+      - '*'
+name: Publish
+jobs:
+  check:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Check
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        uses: MrRamych/gradle-actions/openjdk-8@3.1
+        with:
+          args: publish
