@@ -24,10 +24,6 @@ jacocoTestReport {
 }
 
 dependencies {
-    implementation 'org.slf4j:slf4j-api:1.7.26'
-    implementation 'com.google.guava:guava:28.2-jre'
-    implementation 'org.apache.commons:commons-collections4:4.4'
-
     testImplementation 'org.assertj:assertj-core:3.14.0'
     testImplementation 'org.slf4j:slf4j-simple:1.7.26'
     testImplementation 'org.testng:testng:7.1.0'

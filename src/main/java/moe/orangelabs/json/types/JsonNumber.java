@@ -6,7 +6,7 @@ import moe.orangelabs.json.JsonType;
 
 import java.math.BigDecimal;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class JsonNumber implements Comparable<JsonNumber>, Json {
 
@@ -21,7 +21,7 @@ public final class JsonNumber implements Comparable<JsonNumber>, Json {
     }
 
     public JsonNumber(BigDecimal value) {
-        checkNotNull(value);
+        requireNonNull(value);
         this.value = value;
     }
 
@@ -61,16 +61,16 @@ public final class JsonNumber implements Comparable<JsonNumber>, Json {
 
     @Override
     public int compareTo(JsonNumber o) {
-        return value.compareTo(checkNotNull(o).value);
+        return value.compareTo(requireNonNull(o).value);
     }
 
     public JsonNumber add(JsonNumber value) {
-        checkNotNull(value);
+        requireNonNull(value);
         return new JsonNumber(this.value.add(value.value));
     }
 
     public JsonNumber substract(JsonNumber value) {
-        checkNotNull(value);
+        requireNonNull(value);
         return new JsonNumber(this.value.subtract(value.value));
     }
 }

@@ -3,12 +3,11 @@ package moe.orangelabs.json.types;
 import moe.orangelabs.json.Json;
 import moe.orangelabs.json.JsonCastException;
 import moe.orangelabs.json.JsonType;
-import com.google.common.base.Preconditions;
 
 import java.util.*;
 
+import static java.util.Objects.requireNonNull;
 import static moe.orangelabs.json.Json.toJson;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class JsonArray implements Json, List<Json> {
 
@@ -72,7 +71,7 @@ public class JsonArray implements Json, List<Json> {
 
     @Override
     public boolean add(Json json) {
-        return array.add(checkNotNull(json));
+        return array.add(requireNonNull(json));
     }
 
     @Override
@@ -87,13 +86,13 @@ public class JsonArray implements Json, List<Json> {
 
     @Override
     public boolean addAll(Collection<? extends Json> c) {
-        c.forEach(Preconditions::checkNotNull);
+        c.forEach(Objects::requireNonNull);
         return array.addAll(c);
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends Json> c) {
-        c.forEach(Preconditions::checkNotNull);
+        c.forEach(Objects::requireNonNull);
         return array.addAll(index, c);
     }
 
@@ -139,12 +138,12 @@ public class JsonArray implements Json, List<Json> {
 
     @Override
     public Json set(int index, Json element) {
-        return array.set(index, checkNotNull(element));
+        return array.set(index, requireNonNull(element));
     }
 
     @Override
     public void add(int index, Json element) {
-        array.add(index, checkNotNull(element));
+        array.add(index, requireNonNull(element));
     }
 
     @Override

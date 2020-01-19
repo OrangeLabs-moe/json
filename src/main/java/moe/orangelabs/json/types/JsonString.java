@@ -4,7 +4,7 @@ import moe.orangelabs.json.Json;
 import moe.orangelabs.json.JsonCastException;
 import moe.orangelabs.json.JsonType;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class JsonString implements Json {
 
@@ -13,7 +13,7 @@ public final class JsonString implements Json {
     public final String string;
 
     public JsonString(String string) {
-        this.string = checkNotNull(string);
+        this.string = requireNonNull(string);
     }
 
     @Override

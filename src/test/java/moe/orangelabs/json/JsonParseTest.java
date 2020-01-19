@@ -21,6 +21,11 @@ import static org.assertj.core.api.Assertions.*;
 
 public class JsonParseTest {
 
+    private static final List<String> ignoredSuiteTest = Arrays.asList(
+            "n_multidigit_number_then_00.json" //ignore this because we trim control characters with String.trim()
+    );
+    Logger logger = LoggerFactory.getLogger(JsonParseTest.class);
+
     @DataProvider(name = "parse")
     public Object[][] getParseData() {
         return new Object[][]{
@@ -51,7 +56,6 @@ public class JsonParseTest {
         assertThat(Json.parse(input)).isEqualTo(expected);
     }
 
-
     @DataProvider(name = "parseError")
     public Object[][] getParseErrorData() {
         return new Object[][]{
@@ -80,9 +84,6 @@ public class JsonParseTest {
     public void parseError(String input) {
         assertThatThrownBy(() -> Json.parse(input)).isExactlyInstanceOf(ParseException.class);
     }
-
-
-    Logger logger = LoggerFactory.getLogger(JsonParseTest.class);
 
     @DataProvider(name = "suite")
     public Object[][] getSuiteTests() throws IOException {
@@ -126,10 +127,6 @@ public class JsonParseTest {
 
         return resultObject;
     }
-
-    private static final List<String> ignoredSuiteTest = Arrays.asList(
-            "n_multidigit_number_then_00.json" //ignore this because we trim control characters with String.trim()
-    );
 
     @Test(timeOut = 5 * 1000, dataProvider = "suite")
     public void testSuite(String name, String string, SuiteExpectedResult expectedResult) {

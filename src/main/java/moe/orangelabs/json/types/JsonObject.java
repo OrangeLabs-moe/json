@@ -4,13 +4,11 @@ import moe.orangelabs.json.Json;
 import moe.orangelabs.json.JsonCastException;
 import moe.orangelabs.json.JsonNotFoundException;
 import moe.orangelabs.json.JsonType;
-import org.apache.commons.collections4.map.UnmodifiableEntrySet;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static moe.orangelabs.json.Json.toJson;
 import static moe.orangelabs.json.JsonType.OBJECT;
 
@@ -27,18 +25,20 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
     }
 
     public JsonObject(Map<Object, Object> data) {
-        checkNotNull(data);
+        requireNonNull(data);
         data.forEach(this::castAndPut);
     }
 
     public JsonObject(Iterable<Object> data) {
-        checkNotNull(data);
+        requireNonNull(data);
         AtomicInteger counter = new AtomicInteger(0);
         data.forEach(o -> castAndPut(counter.getAndIncrement(), o));
     }
 
     public JsonObject(Object... keysAndValues) {
-        checkArgument(keysAndValues.length % 2 == 0);
+        if (keysAndValues.length % 2 != 0) {
+            throw new IllegalArgumentException();
+        }
         for (int i = 0; i < keysAndValues.length / 2; i++) {
             castAndPut(keysAndValues[i * 2], keysAndValues[i * 2 + 1]);
         }
@@ -102,8 +102,8 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
     }
 
     public Json put(JsonString key, Json value) {
-        checkNotNull(key);
-        checkNotNull(value);
+        requireNonNull(key);
+        requireNonNull(value);
         return map.put(key, value);
     }
 
@@ -134,7 +134,7 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
 
     @Override
     public Set<Entry<JsonString, Json>> entrySet() {
-        return UnmodifiableEntrySet.unmodifiableEntrySet(map.entrySet());
+        return Collections.unmodifiableSet(map.entrySet());
     }
 
     public Json castAndPut(Object key, Object value) {

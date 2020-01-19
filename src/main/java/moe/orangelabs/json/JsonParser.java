@@ -11,7 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 class JsonParser {
 
@@ -31,7 +31,7 @@ class JsonParser {
     }
 
     public static Json decode(String data) {
-        checkNotNull(data);
+        requireNonNull(data);
         data = data.trim();
         List<Object> tokens = tokenize(CharBuffer.wrap(data));
         if (tokens.get(0) == mapStart || tokens.get(0) == arrayStart) {
