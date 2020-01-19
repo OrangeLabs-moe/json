@@ -10,7 +10,6 @@ sourceCompatibility = '1.8'
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 test {
@@ -31,7 +30,7 @@ dependencies {
 
     testImplementation 'org.assertj:assertj-core:3.14.0'
     testImplementation 'org.slf4j:slf4j-simple:1.7.26'
-    testImplementation 'org.testng:testng:7.1.1'
+    testImplementation 'org.testng:testng:7.1.0'
 }
 
 task sourcesJar(type: Jar) {

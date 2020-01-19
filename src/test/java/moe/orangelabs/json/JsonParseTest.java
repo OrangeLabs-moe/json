@@ -1,11 +1,11 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.math.BigDecimal;
 
-import static com.github.mrramych.json.Json.*;
+import static moe.orangelabs.json.Json.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

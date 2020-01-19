@@ -1,6 +1,6 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
-import com.github.mrramych.json.types.JsonNumber;
+import moe.orangelabs.json.types.JsonNumber;
 import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -1,4 +1,4 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
 public interface JsonSerializable {
 

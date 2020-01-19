@@ -1,8 +1,8 @@
-package com.github.mrramych.json.types;
+package moe.orangelabs.json.types;
 
-import com.github.mrramych.json.Json;
-import com.github.mrramych.json.JsonCastException;
-import com.github.mrramych.json.JsonType;
+import moe.orangelabs.json.Json;
+import moe.orangelabs.json.JsonCastException;
+import moe.orangelabs.json.JsonType;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -1,6 +1,6 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
-import com.github.mrramych.json.types.*;
+import moe.orangelabs.json.types.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,7 +17,7 @@ public interface Json extends Cloneable {
     JsonBoolean FALSE = new JsonBoolean(false);
 
     static Json parse(String data) {
-        return JsonDecoder.decode(data);
+        return JsonParser.decode(data);
     }
 
     /**

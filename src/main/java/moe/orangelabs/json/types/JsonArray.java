@@ -1,13 +1,13 @@
-package com.github.mrramych.json.types;
+package moe.orangelabs.json.types;
 
-import com.github.mrramych.json.Json;
-import com.github.mrramych.json.JsonCastException;
-import com.github.mrramych.json.JsonType;
+import moe.orangelabs.json.Json;
+import moe.orangelabs.json.JsonCastException;
+import moe.orangelabs.json.JsonType;
 import com.google.common.base.Preconditions;
 
 import java.util.*;
 
-import static com.github.mrramych.json.Json.toJson;
+import static moe.orangelabs.json.Json.toJson;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class JsonArray implements Json, List<Json> {

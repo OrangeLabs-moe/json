@@ -1,10 +1,10 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
-import com.github.mrramych.json.types.JsonObject;
+import moe.orangelabs.json.types.JsonObject;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.github.mrramych.json.Json.*;
+import static moe.orangelabs.json.Json.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -96,6 +96,48 @@ public class JsonObjectTest {
 
         assertThat(object.getBooleanOrDefault("boolean", false)).isEqualTo(bool(true));
         assertThat(object.getBooleanOrDefault("boolean2", false)).isEqualTo(bool(false));
+    }
+
+    @Test
+    public void testContains() {
+        JsonObject object = object(
+                "object", object("1", "1"),
+                "array", array(1, 2, 3),
+                "string", "string",
+                "number", 123,
+                "boolean", true,
+                "null", null
+        );
+
+        assertThat(object.containsKey("object")).isTrue();
+        assertThat(object.containsKey("object2")).isFalse();
+
+        assertThat(object.containsValue(array(1, 2, 3))).isTrue();
+        assertThat(object.containsValue(array())).isFalse();
+
+        assertThat(object.containsObject("object")).isTrue();
+        assertThat(object.containsObject("object2")).isFalse();
+        assertThat(object.containsObject("null")).isFalse();
+
+        assertThat(object.containsArray("array")).isTrue();
+        assertThat(object.containsArray("array2")).isFalse();
+        assertThat(object.containsArray("null")).isFalse();
+
+        assertThat(object.containsString("string")).isTrue();
+        assertThat(object.containsString("string2")).isFalse();
+        assertThat(object.containsString("null")).isFalse();
+
+        assertThat(object.containsNumber("number")).isTrue();
+        assertThat(object.containsNumber("number2")).isFalse();
+        assertThat(object.containsNumber("null")).isFalse();
+
+        assertThat(object.containsBoolean("boolean")).isTrue();
+        assertThat(object.containsBoolean("boolean2")).isFalse();
+        assertThat(object.containsBoolean("null")).isFalse();
+
+        assertThat(object.containsNull("null")).isTrue();
+        assertThat(object.containsNull("boolean2")).isFalse();
+        assertThat(object.containsNull("string")).isFalse();
     }
 
 }

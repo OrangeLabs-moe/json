@@ -1,18 +1,18 @@
-package com.github.mrramych.json.types;
+package moe.orangelabs.json.types;
 
-import com.github.mrramych.json.Json;
-import com.github.mrramych.json.JsonCastException;
-import com.github.mrramych.json.JsonNotFoundException;
-import com.github.mrramych.json.JsonType;
+import moe.orangelabs.json.Json;
+import moe.orangelabs.json.JsonCastException;
+import moe.orangelabs.json.JsonNotFoundException;
+import moe.orangelabs.json.JsonType;
 import org.apache.commons.collections4.map.UnmodifiableEntrySet;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.github.mrramych.json.Json.toJson;
-import static com.github.mrramych.json.JsonType.OBJECT;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static moe.orangelabs.json.Json.toJson;
+import static moe.orangelabs.json.JsonType.OBJECT;
 
 public final class JsonObject implements Map<JsonString, Json>, Json {
 
@@ -56,12 +56,40 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
 
     @Override
     public boolean containsKey(Object key) throws IllegalArgumentException {
-        return map.containsKey(toJson(key).getAsString());
+        Json jsonKey = toJson(key);
+        if (!jsonKey.isString()) {
+            throw new IllegalArgumentException();
+        }
+        return map.containsKey(jsonKey);
     }
 
     @Override
     public boolean containsValue(Object value) {
-        return map.containsKey(toJson(value));
+        return map.containsValue(toJson(value));
+    }
+
+    public boolean containsObject(Object key) {
+        return containsKey(key) && get(key).isObject();
+    }
+
+    public boolean containsArray(Object key) {
+        return containsKey(key) && get(key).isArray();
+    }
+
+    public boolean containsString(Object key) {
+        return containsKey(key) && get(key).isString();
+    }
+
+    public boolean containsNumber(Object key) {
+        return containsKey(key) && get(key).isNumber();
+    }
+
+    public boolean containsBoolean(Object key) {
+        return containsKey(key) && get(key).isBoolean();
+    }
+
+    public boolean containsNull(Object key) {
+        return containsKey(key) && get(key).isNull();
     }
 
     @Override

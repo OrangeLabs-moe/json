@@ -1,9 +1,9 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
-import com.github.mrramych.json.types.JsonArray;
-import com.github.mrramych.json.types.JsonNumber;
-import com.github.mrramych.json.types.JsonObject;
-import com.github.mrramych.json.types.JsonString;
+import moe.orangelabs.json.types.JsonArray;
+import moe.orangelabs.json.types.JsonNumber;
+import moe.orangelabs.json.types.JsonObject;
+import moe.orangelabs.json.types.JsonString;
 
 import java.nio.Buffer;
 import java.nio.CharBuffer;
@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class JsonDecoder {
+class JsonParser {
 
     private static final Marker mapStart = new Marker(() -> "MAP_START");
     private static final Marker mapEnd = new Marker(() -> "MAP_END");
@@ -27,7 +27,7 @@ public class JsonDecoder {
      */
     private static final String escapedSequence = "\"\\/\b\f\n\r\t";
 
-    private JsonDecoder() {
+    private JsonParser() {
     }
 
     public static Json decode(String data) {

@@ -1,6 +1,6 @@
-package com.github.mrramych.json;
+package moe.orangelabs.json;
 
-import com.github.mrramych.json.types.JsonString;
+import moe.orangelabs.json.types.JsonString;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
