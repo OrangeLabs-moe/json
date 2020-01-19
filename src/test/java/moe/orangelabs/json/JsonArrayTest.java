@@ -67,6 +67,8 @@ public class JsonArrayTest {
         return new Object[][]{
                 {0, "[\"abc\",\"abc\"]", Json.array("abc", "abc")},
                 {1, "[\"\\\"\",\"\\\"\"]", Json.array("\"", "\"")},
+                {2, "[1]", array(1)},
+                {2, "[  1  ]", array(1)}
         };
     }
 

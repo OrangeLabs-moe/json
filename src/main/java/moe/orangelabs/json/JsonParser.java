@@ -36,8 +36,12 @@ class JsonParser {
         List<Object> tokens = tokenize(CharBuffer.wrap(data));
         if (tokens.get(0) == mapStart || tokens.get(0) == arrayStart) {
             return parseStructure(tokens);
-        } else
+        } else if (tokens.size() == 1 && tokens.get(0) instanceof Json) {
+            return (Json) tokens.get(0);
+        } else {
             throw new ParseException("Unexpected first token");
+        }
+
     }
 
     private static List<Object> tokenize(CharBuffer buffer) {
@@ -46,6 +50,9 @@ class JsonParser {
             char ch = buffer.get(buffer.position());
             switch (ch) {
                 case ' ':
+                case '\n':
+                case '\r':
+                case '\t':
                     skipBuffer(buffer, 1);
                     break;
                 case '{':
@@ -77,6 +84,7 @@ class JsonParser {
                     break;
             }
         }
+
         return tokens;
     }
 
@@ -121,7 +129,6 @@ class JsonParser {
 
                 if (tokens.get(i) == mapEnd || tokens.get(i) == arrayEnd) {
                     end = i;
-
                 }
 
                 if (start != -1 && end != -1 && end > start) {
@@ -138,51 +145,13 @@ class JsonParser {
                         mapTokens.remove(0);
                         mapTokens.remove(mapTokens.size() - 1);
 
-                        JsonObject object = new JsonObject();
-                        while (mapTokens.size() >= 3) {
-                            if (!(mapTokens.get(0) instanceof JsonString))
-                                throw new ParseException("Object key must be string");
-                            JsonString key = ((JsonString) mapTokens.remove(0));
-
-                            if (mapTokens.remove(0) != keySeparator)
-                                throw new ParseException("Key separator was expected");
-
-                            if (!(mapTokens.get(0) instanceof Json))
-                                throw new ParseException("Expected json value");
-                            Json value = ((Json) mapTokens.remove(0));
-
-                            object.put(key, value);
-
-                            if (mapTokens.size() > 0) {
-                                if (mapTokens.get(0) == pairSeparator) {
-                                    mapTokens.remove(0);
-                                } else throw new ParseException("Pair separator expected");
-                            }
-                        }
-                        tokens.add(start, object);
+                        tokens.add(start, populateObject(mapTokens));
                     } else {
                         List<Object> arrayTokens = tokens.subList(start, end + 1);
                         arrayTokens.remove(0);
                         arrayTokens.remove(arrayTokens.size() - 1);
 
-                        JsonArray array = new JsonArray();
-
-                        while (arrayTokens.size() > 0) {
-                            if (!(arrayTokens.get(0) instanceof Json))
-                                throw new ParseException("Expected json value");
-                            Json value = ((Json) arrayTokens.remove(0));
-
-                            if (arrayTokens.size() > 0) {
-                                if (arrayTokens.get(0) == pairSeparator) {
-                                    arrayTokens.remove(0);
-                                } else
-                                    throw new ParseException("Pair separator expected");
-                            }
-
-                            array.add(value);
-                        }
-
-                        tokens.add(start, array);
+                        tokens.add(start, populateArray(arrayTokens));
                     }
 
                     start = -1;
@@ -192,7 +161,89 @@ class JsonParser {
             }
         }
 
+        if (tokens.size() > 1) {
+            throw new ParseException("Expected only one structure");
+        }
+
         return (Json) tokens.get(0);
+    }
+
+    /**
+     * @param objectTokens items and separators to add to object. Does not include '{' and '}' symbols.
+     */
+    private static JsonObject populateObject(List<Object> objectTokens) {
+        JsonObject object = new JsonObject();
+
+        if (objectTokens.size() == 0) {
+            return object;
+        }
+
+        if (objectTokens.size() % 2 == 0) {
+            throw new ParseException("Number of elements in object must be odd number or 0");
+        }
+
+        if (!((objectTokens.size() == 3) || ((objectTokens.size() - 3) % 4 == 0))) {
+            throw new ParseException("Number of elements in array must be odd number");
+        }
+
+        for (int i = 0; i <= objectTokens.size() / 4; i++) {
+            JsonString key;
+            if (objectTokens.get(i * 4) instanceof JsonString) {
+                key = (JsonString) objectTokens.get(i * 4);
+            } else {
+                throw new ParseException("Object key must be string");
+            }
+
+            if (objectTokens.get(i * 4 + 1) != keySeparator) {
+                throw new ParseException("Key separator was expected");
+            }
+
+            Json value;
+            if (objectTokens.get(0) instanceof Json) {
+                value = ((Json) objectTokens.get(i * 4 + 2));
+            } else {
+                throw new ParseException("Expected json value");
+            }
+
+            if (!(i == (objectTokens.size() / 4) || objectTokens.get(i * 4 + 3) == pairSeparator)) {
+                throw new ParseException("Separator expected");
+            }
+
+            object.put(key, value);
+        }
+
+        objectTokens.clear();
+        return object;
+    }
+
+    /**
+     * @param arrayTokens items and separators to add to array. Does not include '[' and ']' symbols.
+     */
+    private static JsonArray populateArray(List<Object> arrayTokens) {
+        JsonArray array = new JsonArray();
+
+        if (arrayTokens.size() == 0) {
+            return array;
+        }
+
+        if (arrayTokens.size() % 2 == 0) {
+            throw new ParseException("Number of elements in array must be odd number or 0");
+        }
+
+        for (int i = 0; i <= arrayTokens.size() / 2; i++) {
+            if (arrayTokens.get(i * 2) instanceof Json) {
+                array.add((Json) arrayTokens.get(i * 2));
+            } else {
+                throw new ParseException("Expected json value");
+            }
+
+            if (!(i == (arrayTokens.size() / 2) || arrayTokens.get(i * 2 + 1) == pairSeparator)) {
+                throw new ParseException("Separator expected");
+            }
+        }
+
+        arrayTokens.clear();
+        return array;
     }
 
     private static boolean charBufferStartsWith(CharBuffer buffer, String data) {
@@ -221,20 +272,35 @@ class JsonParser {
             skipBuffer(buffer, 4);
             return Json.NULL;
         } else {
-            int i = 0;
-
-            while (((buffer.position() + i) < buffer.capacity())
-                    && "+-0123456789.eE".indexOf(buffer.get(buffer.position() + i)) >= 0) {
-                i++;
-            }
-
-            if (i == 0) {
-                throw new ParseException("Could not parse number");
-            }
-            JsonNumber result = new JsonNumber(buffer.toString().substring(0, i));
-            skipBuffer(buffer, i);
-            return result;
+            return parseNumber(buffer);
         }
+    }
+
+    private static Json parseNumber(CharBuffer buffer) {
+        int i = 0;
+
+        while (((buffer.position() + i) < buffer.capacity())
+                && "+-0123456789.eE".indexOf(buffer.get(buffer.position() + i)) >= 0) {
+            i++;
+        }
+
+        if (i == 0) {
+            throw new ParseException("Could not parse number");
+        }
+        String number = buffer.toString().substring(0, i);
+        skipBuffer(buffer, i);
+
+        return new JsonNumber(validateNumber(number));
+    }
+
+    private static String validateNumber(String number) {
+        //https://stackoverflow.com/questions/13340717/json-numbers-regular-expression
+
+        if (!number.matches("-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?")) {
+            throw new NumberFormatException();
+        }
+
+        return number;
     }
 
     private static JsonString parseString(CharBuffer buffer) {
@@ -256,10 +322,32 @@ class JsonParser {
         StringBuilder out = new StringBuilder();
         char[] chars = input.toCharArray();
         for (int i = 0; i < chars.length; i++) {
+            if ((int) chars[i] <= 0x1f) {
+                throw new ParseException("Unexpected control character");
+            }
             if (chars[i] == '\\') {
                 if (escapedCharacters.indexOf(chars[i + 1]) >= 0) {
                     out.append(escapedSequence.charAt(escapedCharacters.indexOf(chars[i + 1])));
                     i++;
+                } else if (chars[i + 1] == 'u') {
+                    char first = (char) Integer.parseInt(input.substring(i + 2, i + 2 + 4), 16);
+
+                    if (chars.length - i - 6 >= 6) {
+                        if (chars[i + 6] == '\\' && chars[i + 7] == 'u') {
+                            char second = (char) Integer.parseInt(input.substring(i + 2 + 6, i + 2 + 4 + 6), 16);
+
+                            if (Character.isSurrogatePair(first, second)) {
+                                out.append(Character.toChars(Character.toCodePoint(first, second)));
+                                i += 11;
+                            }
+                        }
+                    } else {
+                        out.append(Character.toChars(first));
+                        i += 5;
+                    }
+
+                } else {
+                    throw new ParseException("Unexpected backslash character");
                 }
             } else {
                 out.append(chars[i]);

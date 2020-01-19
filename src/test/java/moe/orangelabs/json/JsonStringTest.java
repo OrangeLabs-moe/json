@@ -14,7 +14,8 @@ public class JsonStringTest {
                 {0, "abc", "\"abc\""},
                 {1, "Sample string", "\"Sample string\""},
                 {2, "\u22a0", "\"\u22a0\""},
-                {3, "abc\"\\/\b\f\n\r\tabc", "\"abc\\\"\\\\\\/\\b\\f\\n\\r\\tabc\""}
+                {3, "abc\"\\/\b\f\n\r\tabc", "\"abc\\\"\\\\\\/\\b\\f\\n\\r\\tabc\""},
+                {4, "\uD834\uDD1E", "\"\uD834\uDD1E\""}
         };
     }
 
@@ -32,7 +33,9 @@ public class JsonStringTest {
                 {3, "\"\\\"\"", "\""},
                 {4, "\"\\\"\\\"\"", "\"\""},
                 {5, "\"abc \\\" \\\\ \\/ \\b \\f \\n \\r \\t abc\"",
-                        "abc \" \\ / \b \f \n \r \t abc"}
+                        "abc \" \\ / \b \f \n \r \t abc"},
+                {6, "\"\\u003b\"", ";"},
+                {7, "\"\\uD834\\uDD1E\"", "\uD834\uDD1E"}
         };
     }
 
