@@ -9,18 +9,24 @@ import java.nio.Buffer;
 import java.nio.CharBuffer;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Stack;
 
 import static java.util.Objects.requireNonNull;
 
-class JsonParser {
+final class JsonParser {
 
-    private static final Marker mapStart = new Marker(() -> "MAP_START");
-    private static final Marker mapEnd = new Marker(() -> "MAP_END");
+    private static final Marker objectStart = new Marker(() -> "OBJECT_START");
+    private static final Marker objectEnd = new Marker(() -> "OBJECT_END");
     private static final Marker arrayStart = new Marker(() -> "ARRAY_START");
     private static final Marker arrayEnd = new Marker(() -> "ARRAY_END");
-    private static final Marker keySeparator = new Marker(() -> "KEY_SEPARATOR");
-    private static final Marker pairSeparator = new Marker(() -> "PAIR_SEPARATOR");
+    /**
+     * ':'
+     */
+    private static final Marker keyValueSeparator = new Marker(() -> "KEY_VALUE_SEPARATOR");
+    /**
+     * ','
+     */
+    private static final Marker separator = new Marker(() -> "SEPARATOR");
     private static final String escapedCharacters = "\"\\/bfnrt";
     /**
      * Chars from escapedCharacters string are replaced with chars from this string
@@ -34,7 +40,7 @@ class JsonParser {
         requireNonNull(data);
         data = data.trim();
         List<Object> tokens = tokenize(CharBuffer.wrap(data));
-        if (tokens.get(0) == mapStart || tokens.get(0) == arrayStart) {
+        if (tokens.get(0) == objectStart || tokens.get(0) == arrayStart) {
             return parseStructure(tokens);
         } else if (tokens.size() == 1 && tokens.get(0) instanceof Json) {
             return (Json) tokens.get(0);
@@ -57,11 +63,11 @@ class JsonParser {
                     break;
                 case '{':
                     buffer.get();
-                    tokens.add(mapStart);
+                    tokens.add(objectStart);
                     break;
                 case '}':
                     buffer.get();
-                    tokens.add(mapEnd);
+                    tokens.add(objectEnd);
                     break;
                 case '[':
                     buffer.get();
@@ -73,11 +79,11 @@ class JsonParser {
                     break;
                 case ':':
                     buffer.get();
-                    tokens.add(keySeparator);
+                    tokens.add(keyValueSeparator);
                     break;
                 case ',':
                     buffer.get();
-                    tokens.add(pairSeparator);
+                    tokens.add(separator);
                     break;
                 default:
                     tokens.add(fromStringSimple(buffer));
@@ -88,84 +94,166 @@ class JsonParser {
         return tokens;
     }
 
-    private static void checkOpenCloseTokenCount(List<Object> tokens) {
-        AtomicInteger mapStartsCount = new AtomicInteger();
-        AtomicInteger mapEndsCount = new AtomicInteger();
-        AtomicInteger arrayStartsCount = new AtomicInteger();
-        AtomicInteger arrayEndsCount = new AtomicInteger();
+    private static void checkOpenCloseTokens(List<Object> tokens) {
+        LinkedList<Object> structTokens = new LinkedList<>();
 
-        tokens.forEach(
-                o -> {
-                    if (o == mapStart) {
-                        mapStartsCount.getAndIncrement();
-                    }
-                    if (o == mapEnd) {
-                        mapEndsCount.getAndIncrement();
-                    }
-                    if (o == arrayStart) {
-                        arrayStartsCount.getAndIncrement();
-                    }
-                    if (o == arrayEnd) {
-                        arrayEndsCount.getAndIncrement();
-                    }
-                });
-        if (mapStartsCount.get() != mapEndsCount.get() || arrayStartsCount.get() != arrayEndsCount.get()) {
-            throw new ParseException("Unequal count of open/close brackets");
+        if (tokens.get(0) == objectStart || tokens.get(0) == arrayStart) {
+            structTokens.add(tokens.get(0));
+        } else {
+            throw new ParseException("Expected array start or object start");
+        }
+
+        for (int i = 1, tokensSize = tokens.size(); i < tokensSize; i++) {
+            Object o = tokens.get(i);
+            if (o == objectStart || o == arrayStart) {
+                if (structTokens.size() == 0) {
+                    throw new ParseException("Expected exactly one structure");
+                }
+                structTokens.add(o);
+            }
+            if (o == objectEnd) {
+                if (structTokens.getLast() == objectStart) {
+                    structTokens.removeLast();
+                } else {
+                    throw new ParseException("Unaligned object");
+                }
+            }
+            if (o == arrayEnd) {
+                if (structTokens.getLast() == arrayStart) {
+                    structTokens.removeLast();
+                } else {
+                    throw new ParseException("Unaligned object");
+                }
+            }
+            if (structTokens.size() == 0) {
+                if (i < tokensSize - 1) {
+                    throw new ParseException("Extra tokens");
+                }
+                return;
+            }
+        }
+        if (structTokens.size() > 0) {
+            throw new ParseException("Unaligned structures");
         }
     }
 
     private static Json parseStructure(List<Object> tokens) {
-        checkOpenCloseTokenCount(tokens);
+        checkOpenCloseTokens(tokens);
 
-        //while we has not combined top level structure
-        while (tokens.get(0) == mapStart || tokens.get(0) == arrayStart) {
-            //find first deepest array/object
-            int start = -1;
-            int end = -1;
-            for (int i = 0; i < tokens.size(); i++) {
-                if (tokens.get(i) == mapStart || tokens.get(i) == arrayStart) {
-                    start = i;
-                }
+        final Stack<Json> stack = new Stack<>();
 
-                if (tokens.get(i) == mapEnd || tokens.get(i) == arrayEnd) {
-                    end = i;
-                }
+        Json root;
 
-                if (start != -1 && end != -1 && end > start) {
-                    if (tokens.get(start) == mapStart && tokens.get(end) == arrayEnd) {
-                        throw new ParseException("Unaligned close/open tokens");
+        if (tokens.get(0) == objectStart) {
+            root = stack.push(new JsonObject());
+            tokens.remove(0);
+        } else if (tokens.get(0) == arrayStart) {
+            root = stack.push(new JsonArray());
+            tokens.remove(0);
+        } else {
+            throw new ParseException("Expected structure");
+        }
+
+        while (tokens.size() > 0) {
+            Json last = stack.peek();
+            if (last.isArray()) {
+                JsonArray lastArray = last.getAsArray();
+                Object first = tokens.remove(0);
+
+                if (first instanceof Json) {
+                    lastArray.add((Json) first);
+
+                    if (tokens.size() == 0) {
+                        throw new ParseException("Unexpected end");
                     }
-                    if (tokens.get(start) == arrayStart && tokens.get(end) == mapEnd) {
-                        throw new ParseException("Unaligned close/open tokens");
+                    Object nextToken = tokens.get(0);
+                    if (nextToken == separator) {
+                        if (tokens.size() < 2) {
+                            throw new ParseException("Expected more tokens");
+                        }
+                        Object nextNextToken = tokens.get(1);
+                        if (!(nextNextToken instanceof Json || nextNextToken == objectStart || nextNextToken == arrayStart)) {
+                            throw new ParseException("Unexpected value");
+                        }
+                        tokens.remove(0);
+                    } else if (nextToken != arrayEnd) {
+                        throw new ParseException("Unexpected token");
                     }
 
+                } else if (first == arrayStart) {
+                    lastArray.add(stack.push(new JsonArray()));
+                } else if (first == objectStart) {
+                    lastArray.add(stack.push(new JsonObject()));
+                } else if (first == arrayEnd) {
+                    stack.pop();
+                    if (tokens.size() > 0 && tokens.get(0) == separator) {
+                        tokens.remove(0);
+                    }
+                } else {
+                    throw new ParseException("Expected json/arrayEnd/arrayStart/object/start");
+                }
+            } else if (last.isObject()) {
+                JsonObject lastObject = last.getAsObject();
+                Object first = tokens.remove(0);
 
-                    if (tokens.get(start) == mapStart) {
-                        List<Object> mapTokens = tokens.subList(start, end + 1);
-                        mapTokens.remove(0);
-                        mapTokens.remove(mapTokens.size() - 1);
+                if (first instanceof Json) {
+                    if (tokens.size() < 3) {
+                        throw new ParseException("Expected more tokens");
+                    }
 
-                        tokens.add(start, populateObject(mapTokens));
+                    JsonString key;
+                    if (((Json) first).isString()) {
+                        key = (JsonString) first;
                     } else {
-                        List<Object> arrayTokens = tokens.subList(start, end + 1);
-                        arrayTokens.remove(0);
-                        arrayTokens.remove(arrayTokens.size() - 1);
-
-                        tokens.add(start, populateArray(arrayTokens));
+                        throw new ParseException("Key must be string");
                     }
 
-                    start = -1;
-                    end = -1;
-                }
+                    if (tokens.remove(0) != keyValueSeparator) {
+                        throw new ParseException("Expected ':'");
+                    }
 
+                    Object value = tokens.remove(0);
+                    if (value instanceof Json) {
+                        lastObject.put(key, (Json) value);
+
+                        if (tokens.size() == 0) {
+                            throw new ParseException("Unexpected end");
+                        }
+                        Object nextToken = tokens.get(0);
+                        if (nextToken == separator) {
+                            if (tokens.size() < 2) {
+                                throw new ParseException("Expected more tokens");
+                            }
+                            Object nextNextToken = tokens.get(1);
+                            if (!(nextNextToken instanceof Json || nextNextToken == objectStart || nextNextToken == arrayStart)) {
+                                throw new ParseException("Unexpected value");
+                            }
+                            tokens.remove(0);
+                        } else if (nextToken != objectEnd) {
+                            throw new ParseException("Unexpected token");
+                        }
+
+                    } else if (value == objectStart) {
+                        lastObject.put(key, stack.push(new JsonObject()));
+                    } else if (value == arrayStart) {
+                        lastObject.put(key, stack.push(new JsonArray()));
+                    } else {
+                        throw new ParseException("Expected value");
+                    }
+                } else if (first == objectEnd) {
+                    stack.pop();
+                    if (tokens.size() > 0 && tokens.get(0) == separator) {
+                        tokens.remove(0);
+                    }
+                } else {
+                    throw new ParseException("Unexpected token");
+                }
+            } else {
+                throw new ParseException("Expected structure");
             }
         }
 
-        if (tokens.size() > 1) {
-            throw new ParseException("Expected only one structure");
-        }
-
-        return (Json) tokens.get(0);
+        return root;
     }
 
     /**
@@ -194,7 +282,7 @@ class JsonParser {
                 throw new ParseException("Object key must be string");
             }
 
-            if (objectTokens.get(i * 4 + 1) != keySeparator) {
+            if (objectTokens.get(i * 4 + 1) != keyValueSeparator) {
                 throw new ParseException("Key separator was expected");
             }
 
@@ -205,7 +293,7 @@ class JsonParser {
                 throw new ParseException("Expected json value");
             }
 
-            if (!(i == (objectTokens.size() / 4) || objectTokens.get(i * 4 + 3) == pairSeparator)) {
+            if (!(i == (objectTokens.size() / 4) || objectTokens.get(i * 4 + 3) == separator)) {
                 throw new ParseException("Separator expected");
             }
 
@@ -237,7 +325,7 @@ class JsonParser {
                 throw new ParseException("Expected json value");
             }
 
-            if (!(i == (arrayTokens.size() / 2) || arrayTokens.get(i * 2 + 1) == pairSeparator)) {
+            if (!(i == (arrayTokens.size() / 2) || arrayTokens.get(i * 2 + 1) == separator)) {
                 throw new ParseException("Separator expected");
             }
         }
