@@ -13,6 +13,8 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          BINTRAY_USERNAME: ${{ secrets.BINTRAY_USERNAME }}
+          BINTRAY_API_TOKEN:  ${{ secrets.BINTRAY_API_TOKEN }}
         uses: MrRamych/gradle-actions/openjdk-8@3.1
         with:
           args: publish --stacktrace
