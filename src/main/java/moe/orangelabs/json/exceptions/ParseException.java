@@ -1,4 +1,4 @@
-package moe.orangelabs.json;
+package moe.orangelabs.json.exceptions;
 
 public class ParseException extends RuntimeException {
 

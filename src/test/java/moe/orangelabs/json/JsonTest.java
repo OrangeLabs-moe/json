@@ -1,10 +1,5 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonArray;
-import moe.orangelabs.json.types.JsonNumber;
-import moe.orangelabs.json.types.JsonObject;
-import moe.orangelabs.json.types.JsonString;
-import org.assertj.core.api.Assertions;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -12,6 +7,13 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static moe.orangelabs.json.Json.*;
+import static moe.orangelabs.json.JsonType.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class JsonTest {
 
@@ -21,6 +23,10 @@ public class JsonTest {
                 {
                         (JsonSerializable) () -> new JsonString("abc"),
                         new JsonString("abc")
+                },
+                {
+                        (JsonSerializable) () -> null,
+                        JsonNull.NULL
                 },
                 {
                         new Object[]{1, new JsonNumber(2), new JsonNumber(3)},
@@ -51,7 +57,7 @@ public class JsonTest {
                         new JsonArray(new JsonNumber(1), new JsonNumber(2), new JsonNumber(3))
                 },
                 {
-                        new HashSet<>(Arrays.asList(1)),
+                        new HashSet<>(Collections.singletonList(1)),
                         new JsonArray(new JsonNumber(1))
                 }
 
@@ -59,12 +65,36 @@ public class JsonTest {
     }
 
     @Test(dataProvider = "conversion")
-    public void testConversion(Object input, Json output) {
-        Assertions.assertThat(Json.toJson(input)).isEqualTo(output);
+    public void testConversionToJson(Object input, Json output) {
+        assertThat(Json.toJson(input)).isEqualTo(output);
     }
 
     @Test
-    public void testNull() {
-        Assertions.assertThat(Json.aNull()).isEqualTo(Json.NULL);
+    public void testAsyncLoop() {
+        JsonObject one = new JsonObject();
+        JsonObject two = new JsonObject();
+
+        one.castAndPut("two", two);
+        two.castAndPut("one", one);
+
+        assertThatThrownBy(() -> one.toStringAsync().get(2, TimeUnit.SECONDS))
+                .isExactlyInstanceOf(TimeoutException.class);
+    }
+
+    @DataProvider(name = "typeProvider")
+    public static Object[][] typeProvider() {
+        return new Object[][]{
+                {object(), OBJECT},
+                {array(), ARRAY},
+                {string(""), STRING},
+                {number(100), NUMBER},
+                {bool(true), BOOLEAN},
+                {aNull(), JsonType.NULL},
+        };
+    }
+
+    @Test(dataProvider = "typeProvider")
+    public void testTypes(Json object, JsonType expectedType) {
+        TestUtils.testType(object, expectedType);
     }
 }

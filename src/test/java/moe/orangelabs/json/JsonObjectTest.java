@@ -1,35 +1,16 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonObject;
+import moe.orangelabs.json.exceptions.JsonCastException;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static moe.orangelabs.json.Json.*;
+import static moe.orangelabs.json.JsonType.ARRAY;
+import static moe.orangelabs.json.JsonType.OBJECT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class JsonObjectTest {
-
-    @Test
-    public void testType() {
-        assertThat(new JsonObject().getType()).isEqualTo(JsonType.OBJECT);
-
-        assertThat(new JsonObject().isObject()).isTrue();
-
-        assertThat(new JsonObject().isArray()).isFalse();
-        assertThat(new JsonObject().isBoolean()).isFalse();
-        assertThat(new JsonObject().isNumber()).isFalse();
-        assertThat(new JsonObject().isNull()).isFalse();
-        assertThat(new JsonObject().isString()).isFalse();
-
-        assertThat(new JsonObject().getAsObject()).isExactlyInstanceOf(JsonObject.class);
-
-        assertThatThrownBy(() -> new JsonObject().getAsArray()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonObject().getAsBoolean()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonObject().getAsNumber()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonObject().getAsNull()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonObject().getAsString()).isExactlyInstanceOf(JsonCastException.class);
-    }
 
     @Test
     public void testClone() {

@@ -1,11 +1,11 @@
-package moe.orangelabs.json.types;
+package moe.orangelabs.json;
 
-import moe.orangelabs.json.Json;
-import moe.orangelabs.json.JsonCastException;
-import moe.orangelabs.json.JsonType;
+import moe.orangelabs.json.exceptions.JsonCastException;
 
-public final class JsonBoolean implements Json {
+public final class JsonBoolean extends Json {
 
+    public static final JsonBoolean TRUE = new JsonBoolean(true);
+    public static final JsonBoolean FALSE = new JsonBoolean(false);
     public final boolean value;
 
     public JsonBoolean(boolean value) {

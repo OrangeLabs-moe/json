@@ -1,6 +1,6 @@
 package moe.orangelabs.json;
 
-public enum JsonType {
+enum JsonType {
     OBJECT,
     ARRAY,
 

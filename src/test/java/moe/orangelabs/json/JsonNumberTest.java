@@ -1,8 +1,10 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonNumber;
 import org.testng.annotations.Test;
 
+import static moe.orangelabs.json.Json.number;
+import static moe.orangelabs.json.JsonType.ARRAY;
+import static moe.orangelabs.json.JsonType.NUMBER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class JsonNumberTest {

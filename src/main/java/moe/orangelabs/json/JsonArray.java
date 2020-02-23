@@ -1,15 +1,12 @@
-package moe.orangelabs.json.types;
+package moe.orangelabs.json;
 
-import moe.orangelabs.json.Json;
-import moe.orangelabs.json.JsonCastException;
-import moe.orangelabs.json.JsonType;
+import moe.orangelabs.json.exceptions.JsonCastException;
 
 import java.util.*;
 
 import static java.util.Objects.requireNonNull;
-import static moe.orangelabs.json.Json.toJson;
 
-public class JsonArray implements Json, List<Json> {
+public class JsonArray extends Json implements List<Json> {
 
     private final LinkedList<Json> array;
 
@@ -81,7 +78,7 @@ public class JsonArray implements Json, List<Json> {
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        return array.contains(c);
+        return array.containsAll(c);
     }
 
     @Override
@@ -191,12 +188,6 @@ public class JsonArray implements Json, List<Json> {
         return new JsonArray(array);
     }
 
-    public Json deepClone() {
-        JsonArray array = new JsonArray();
-        array.addAll(this.array);
-        return array;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -211,20 +202,26 @@ public class JsonArray implements Json, List<Json> {
     }
 
     @Override
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("[");
-
-        Iterator iterator = array.iterator();
-        while (iterator.hasNext()) {
-            builder.append(iterator.next());
-            if (iterator.hasNext()) {
-                builder.append(",");
+    List<Object> deepStringTokenize() {
+        List<Object> tokens = new LinkedList<>();
+        tokens.add(ARRAY_START_TOKEN);
+        for (int i = 0; i < array.size(); i++) {
+            tokens.add(array.get(i));
+            if (i < array.size() - 1) {
+                tokens.add(ENTRY_SEPARATOR_TOKEN);
+            } else {
+                tokens.add(ARRAY_END_TOKEN);
             }
+
         }
+        if (array.size() == 0) {
+            tokens.add(ARRAY_END_TOKEN);
+        }
+        return tokens;
+    }
 
-
-        builder.append("]");
-        return builder.toString();
+    @Override
+    public String toString() {
+        return Json.toString(deepStringTokenize());
     }
 }

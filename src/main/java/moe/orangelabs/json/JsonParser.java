@@ -1,9 +1,6 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonArray;
-import moe.orangelabs.json.types.JsonNumber;
-import moe.orangelabs.json.types.JsonObject;
-import moe.orangelabs.json.types.JsonString;
+import moe.orangelabs.json.exceptions.ParseException;
 
 import java.nio.Buffer;
 import java.nio.CharBuffer;
@@ -12,26 +9,20 @@ import java.util.List;
 import java.util.Stack;
 
 import static java.util.Objects.requireNonNull;
+import static moe.orangelabs.json.JsonArray.*;
 
 final class JsonParser {
 
-    private static final Marker objectStart = new Marker(() -> "OBJECT_START");
-    private static final Marker objectEnd = new Marker(() -> "OBJECT_END");
-    private static final Marker arrayStart = new Marker(() -> "ARRAY_START");
-    private static final Marker arrayEnd = new Marker(() -> "ARRAY_END");
-    /**
-     * ':'
-     */
-    private static final Marker keyValueSeparator = new Marker(() -> "KEY_VALUE_SEPARATOR");
-    /**
-     * ','
-     */
-    private static final Marker separator = new Marker(() -> "SEPARATOR");
     private static final String escapedCharacters = "\"\\/bfnrt";
     /**
      * Chars from escapedCharacters string are replaced with chars from this string
      */
     private static final String escapedSequence = "\"\\/\b\f\n\r\t";
+    private static final char[] STRING_PREFIX = "\"".toCharArray();
+    private static final char[] TRUE_PREFIX = "true".toCharArray();
+    private static final char[] FALSE_PREFIX = "false".toCharArray();
+    private static final char[] NULL_PREFIX = "null".toCharArray();
+    private static final String NUMBER = "0123456789.-+eE";
 
     private JsonParser() {
     }
@@ -39,19 +30,18 @@ final class JsonParser {
     public static Json decode(String data) {
         requireNonNull(data);
         data = data.trim();
-        List<Object> tokens = tokenize(CharBuffer.wrap(data));
-        if (tokens.get(0) == objectStart || tokens.get(0) == arrayStart) {
+        LinkedList<Object> tokens = tokenize(CharBuffer.wrap(data));
+        if (tokens.get(0) == OBJECT_START_TOKEN || tokens.get(0) == ARRAY_START_TOKEN) {
             return parseStructure(tokens);
         } else if (tokens.size() == 1 && tokens.get(0) instanceof Json) {
             return (Json) tokens.get(0);
         } else {
             throw new ParseException("Unexpected first token");
         }
-
     }
 
-    private static List<Object> tokenize(CharBuffer buffer) {
-        List<Object> tokens = new LinkedList<>();
+    private static LinkedList<Object> tokenize(CharBuffer buffer) {
+        LinkedList<Object> tokens = new LinkedList<>();
         while (buffer.hasRemaining()) {
             char ch = buffer.get(buffer.position());
             switch (ch) {
@@ -63,27 +53,27 @@ final class JsonParser {
                     break;
                 case '{':
                     buffer.get();
-                    tokens.add(objectStart);
+                    tokens.add(OBJECT_START_TOKEN);
                     break;
                 case '}':
                     buffer.get();
-                    tokens.add(objectEnd);
+                    tokens.add(OBJECT_END_TOKEN);
                     break;
                 case '[':
                     buffer.get();
-                    tokens.add(arrayStart);
+                    tokens.add(ARRAY_START_TOKEN);
                     break;
                 case ']':
                     buffer.get();
-                    tokens.add(arrayEnd);
+                    tokens.add(ARRAY_END_TOKEN);
                     break;
                 case ':':
                     buffer.get();
-                    tokens.add(keyValueSeparator);
+                    tokens.add(KEY_VALUE_SEPARATOR_TOKEN);
                     break;
                 case ',':
                     buffer.get();
-                    tokens.add(separator);
+                    tokens.add(ENTRY_SEPARATOR_TOKEN);
                     break;
                 default:
                     tokens.add(fromStringSimple(buffer));
@@ -94,62 +84,44 @@ final class JsonParser {
         return tokens;
     }
 
-    private static void checkOpenCloseTokens(List<Object> tokens) {
-        LinkedList<Object> structTokens = new LinkedList<>();
+    private static int checkOpenCloseTokens(List<Object> tokens) {
+        int objectStartCount = 0;
+        int objectEndCount = 0;
+        int arrayStartsCount = 0;
+        int arrayEndsCount = 0;
 
-        if (tokens.get(0) == objectStart || tokens.get(0) == arrayStart) {
-            structTokens.add(tokens.get(0));
-        } else {
-            throw new ParseException("Expected array start or object start");
-        }
-
-        for (int i = 1, tokensSize = tokens.size(); i < tokensSize; i++) {
-            Object o = tokens.get(i);
-            if (o == objectStart || o == arrayStart) {
-                if (structTokens.size() == 0) {
-                    throw new ParseException("Expected exactly one structure");
-                }
-                structTokens.add(o);
+        for (Object o : tokens) {
+            if (o == OBJECT_START_TOKEN) {
+                objectStartCount++;
             }
-            if (o == objectEnd) {
-                if (structTokens.getLast() == objectStart) {
-                    structTokens.removeLast();
-                } else {
-                    throw new ParseException("Unaligned object");
-                }
+            if (o == OBJECT_END_TOKEN) {
+                objectEndCount++;
             }
-            if (o == arrayEnd) {
-                if (structTokens.getLast() == arrayStart) {
-                    structTokens.removeLast();
-                } else {
-                    throw new ParseException("Unaligned object");
-                }
+            if (o == ARRAY_START_TOKEN) {
+                arrayStartsCount++;
             }
-            if (structTokens.size() == 0) {
-                if (i < tokensSize - 1) {
-                    throw new ParseException("Extra tokens");
-                }
-                return;
+            if (o == ARRAY_END_TOKEN) {
+                arrayEndsCount++;
             }
         }
-        if (structTokens.size() > 0) {
-            throw new ParseException("Unaligned structures");
+        if (objectStartCount != objectEndCount || arrayStartsCount != arrayEndsCount) {
+            throw new ParseException("Unequal count of open/close brackets");
         }
+        return objectStartCount + arrayStartsCount;
     }
 
-    private static Json parseStructure(List<Object> tokens) {
-        checkOpenCloseTokens(tokens);
-
+    private static Json parseStructure(LinkedList<Object> tokens) {
         final Stack<Json> stack = new Stack<>();
+        stack.ensureCapacity(checkOpenCloseTokens(tokens));
 
         Json root;
 
-        if (tokens.get(0) == objectStart) {
+        if (tokens.get(0) == OBJECT_START_TOKEN) {
             root = stack.push(new JsonObject());
-            tokens.remove(0);
-        } else if (tokens.get(0) == arrayStart) {
+            tokens.removeFirst();
+        } else if (tokens.get(0) == ARRAY_START_TOKEN) {
             root = stack.push(new JsonArray());
-            tokens.remove(0);
+            tokens.removeFirst();
         } else {
             throw new ParseException("Expected structure");
         }
@@ -158,7 +130,7 @@ final class JsonParser {
             Json last = stack.peek();
             if (last.isArray()) {
                 JsonArray lastArray = last.getAsArray();
-                Object first = tokens.remove(0);
+                Object first = tokens.removeFirst();
 
                 if (first instanceof Json) {
                     lastArray.add((Json) first);
@@ -166,35 +138,35 @@ final class JsonParser {
                     if (tokens.size() == 0) {
                         throw new ParseException("Unexpected end");
                     }
-                    Object nextToken = tokens.get(0);
-                    if (nextToken == separator) {
+                    Object nextToken = tokens.getFirst();
+                    if (nextToken == ENTRY_SEPARATOR_TOKEN) {
                         if (tokens.size() < 2) {
                             throw new ParseException("Expected more tokens");
                         }
                         Object nextNextToken = tokens.get(1);
-                        if (!(nextNextToken instanceof Json || nextNextToken == objectStart || nextNextToken == arrayStart)) {
+                        if (!(nextNextToken instanceof Json || nextNextToken == OBJECT_START_TOKEN || nextNextToken == ARRAY_START_TOKEN)) {
                             throw new ParseException("Unexpected value");
                         }
-                        tokens.remove(0);
-                    } else if (nextToken != arrayEnd) {
+                        tokens.removeFirst();
+                    } else if (nextToken != ARRAY_END_TOKEN) {
                         throw new ParseException("Unexpected token");
                     }
 
-                } else if (first == arrayStart) {
+                } else if (first == ARRAY_START_TOKEN) {
                     lastArray.add(stack.push(new JsonArray()));
-                } else if (first == objectStart) {
+                } else if (first == OBJECT_START_TOKEN) {
                     lastArray.add(stack.push(new JsonObject()));
-                } else if (first == arrayEnd) {
+                } else if (first == ARRAY_END_TOKEN) {
                     stack.pop();
-                    if (tokens.size() > 0 && tokens.get(0) == separator) {
-                        tokens.remove(0);
+                    if (tokens.size() > 0 && tokens.getFirst() == ENTRY_SEPARATOR_TOKEN) {
+                        tokens.removeFirst();
                     }
                 } else {
                     throw new ParseException("Expected json/arrayEnd/arrayStart/object/start");
                 }
             } else if (last.isObject()) {
                 JsonObject lastObject = last.getAsObject();
-                Object first = tokens.remove(0);
+                Object first = tokens.removeFirst();
 
                 if (first instanceof Json) {
                     if (tokens.size() < 3) {
@@ -208,41 +180,41 @@ final class JsonParser {
                         throw new ParseException("Key must be string");
                     }
 
-                    if (tokens.remove(0) != keyValueSeparator) {
+                    if (tokens.removeFirst() != KEY_VALUE_SEPARATOR_TOKEN) {
                         throw new ParseException("Expected ':'");
                     }
 
-                    Object value = tokens.remove(0);
+                    Object value = tokens.removeFirst();
                     if (value instanceof Json) {
                         lastObject.put(key, (Json) value);
 
                         if (tokens.size() == 0) {
                             throw new ParseException("Unexpected end");
                         }
-                        Object nextToken = tokens.get(0);
-                        if (nextToken == separator) {
+                        Object nextToken = tokens.getFirst();
+                        if (nextToken == ENTRY_SEPARATOR_TOKEN) {
                             if (tokens.size() < 2) {
                                 throw new ParseException("Expected more tokens");
                             }
                             Object nextNextToken = tokens.get(1);
-                            if (!(nextNextToken instanceof Json || nextNextToken == objectStart || nextNextToken == arrayStart)) {
+                            if (!(nextNextToken instanceof Json || nextNextToken == OBJECT_START_TOKEN || nextNextToken == ARRAY_START_TOKEN)) {
                                 throw new ParseException("Unexpected value");
                             }
-                            tokens.remove(0);
-                        } else if (nextToken != objectEnd) {
+                            tokens.removeFirst();
+                        } else if (nextToken != OBJECT_END_TOKEN) {
                             throw new ParseException("Unexpected token");
                         }
 
-                    } else if (value == objectStart) {
+                    } else if (value == OBJECT_START_TOKEN) {
                         lastObject.put(key, stack.push(new JsonObject()));
-                    } else if (value == arrayStart) {
+                    } else if (value == ARRAY_START_TOKEN) {
                         lastObject.put(key, stack.push(new JsonArray()));
                     } else {
                         throw new ParseException("Expected value");
                     }
-                } else if (first == objectEnd) {
+                } else if (first == OBJECT_END_TOKEN) {
                     stack.pop();
-                    if (tokens.size() > 0 && tokens.get(0) == separator) {
+                    if (tokens.size() > 0 && tokens.get(0) == ENTRY_SEPARATOR_TOKEN) {
                         tokens.remove(0);
                     }
                 } else {
@@ -256,86 +228,7 @@ final class JsonParser {
         return root;
     }
 
-    /**
-     * @param objectTokens items and separators to add to object. Does not include '{' and '}' symbols.
-     */
-    private static JsonObject populateObject(List<Object> objectTokens) {
-        JsonObject object = new JsonObject();
-
-        if (objectTokens.size() == 0) {
-            return object;
-        }
-
-        if (objectTokens.size() % 2 == 0) {
-            throw new ParseException("Number of elements in object must be odd number or 0");
-        }
-
-        if (!((objectTokens.size() == 3) || ((objectTokens.size() - 3) % 4 == 0))) {
-            throw new ParseException("Number of elements in array must be odd number");
-        }
-
-        for (int i = 0; i <= objectTokens.size() / 4; i++) {
-            JsonString key;
-            if (objectTokens.get(i * 4) instanceof JsonString) {
-                key = (JsonString) objectTokens.get(i * 4);
-            } else {
-                throw new ParseException("Object key must be string");
-            }
-
-            if (objectTokens.get(i * 4 + 1) != keyValueSeparator) {
-                throw new ParseException("Key separator was expected");
-            }
-
-            Json value;
-            if (objectTokens.get(0) instanceof Json) {
-                value = ((Json) objectTokens.get(i * 4 + 2));
-            } else {
-                throw new ParseException("Expected json value");
-            }
-
-            if (!(i == (objectTokens.size() / 4) || objectTokens.get(i * 4 + 3) == separator)) {
-                throw new ParseException("Separator expected");
-            }
-
-            object.put(key, value);
-        }
-
-        objectTokens.clear();
-        return object;
-    }
-
-    /**
-     * @param arrayTokens items and separators to add to array. Does not include '[' and ']' symbols.
-     */
-    private static JsonArray populateArray(List<Object> arrayTokens) {
-        JsonArray array = new JsonArray();
-
-        if (arrayTokens.size() == 0) {
-            return array;
-        }
-
-        if (arrayTokens.size() % 2 == 0) {
-            throw new ParseException("Number of elements in array must be odd number or 0");
-        }
-
-        for (int i = 0; i <= arrayTokens.size() / 2; i++) {
-            if (arrayTokens.get(i * 2) instanceof Json) {
-                array.add((Json) arrayTokens.get(i * 2));
-            } else {
-                throw new ParseException("Expected json value");
-            }
-
-            if (!(i == (arrayTokens.size() / 2) || arrayTokens.get(i * 2 + 1) == separator)) {
-                throw new ParseException("Separator expected");
-            }
-        }
-
-        arrayTokens.clear();
-        return array;
-    }
-
-    private static boolean charBufferStartsWith(CharBuffer buffer, String data) {
-        char[] chars = data.toCharArray();
+    private static boolean charBufferStartsWith(CharBuffer buffer, char[] chars) {
         for (int i = 0; i < chars.length; i++) {
             if (buffer.get(buffer.position() + i) != chars[i]) {
                 return false;
@@ -348,123 +241,65 @@ final class JsonParser {
      * @return Json, chars to skip
      */
     private static Json fromStringSimple(CharBuffer buffer) {
-        if (charBufferStartsWith(buffer, "\"")) {
+        if (charBufferStartsWith(buffer, STRING_PREFIX)) {
             return parseString(buffer);
-        } else if (charBufferStartsWith(buffer, "true")) {
+        } else if (charBufferStartsWith(buffer, TRUE_PREFIX)) {
             skipBuffer(buffer, 4);
-            return Json.TRUE;
-        } else if (charBufferStartsWith(buffer, "false")) {
+            return JsonBoolean.TRUE;
+        } else if (charBufferStartsWith(buffer, FALSE_PREFIX)) {
             skipBuffer(buffer, 5);
-            return Json.FALSE;
-        } else if (charBufferStartsWith(buffer, "null")) {
+            return JsonBoolean.FALSE;
+        } else if (charBufferStartsWith(buffer, NULL_PREFIX)) {
             skipBuffer(buffer, 4);
-            return Json.NULL;
+            return JsonNull.NULL;
         } else {
             return parseNumber(buffer);
         }
     }
 
     private static Json parseNumber(CharBuffer buffer) {
-        int i = 0;
-
-        while (((buffer.position() + i) < buffer.capacity())
-                && "+-0123456789.eE".indexOf(buffer.get(buffer.position() + i)) >= 0) {
-            i++;
+        StringBuilder builder = new StringBuilder();
+        boolean process = true;
+        while (process && buffer.remaining() > 0) {
+            char nextChar = buffer.get();
+            if (NUMBER.indexOf(nextChar) >= 0) {
+                builder.append(nextChar);
+            } else {
+                skipBuffer(buffer, -1);
+                process = false;
+            }
         }
-
-        if (i == 0) {
-            throw new ParseException("Could not parse number");
-        }
-        String number = buffer.toString().substring(0, i);
-        skipBuffer(buffer, i);
-
-        return new JsonNumber(validateNumber(number));
-    }
-
-    private static String validateNumber(String number) {
-        //https://stackoverflow.com/questions/13340717/json-numbers-regular-expression
-
-        if (!number.matches("-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?")) {
-            throw new NumberFormatException();
-        }
-
-        return number;
+        return new JsonNumber(builder.toString());
     }
 
     private static JsonString parseString(CharBuffer buffer) {
         skipBuffer(buffer, 1);
-        int i = 0;
-        while (true) {
-            if ((buffer.get(buffer.position() + i) == '"') && (buffer.get(buffer.position() + i - 1) != '\\')) {
-                break;
-            } else {
-                i++;
-            }
-        }
-        JsonString result = new JsonString(unescapeString(buffer.toString().substring(0, i)));
-        skipBuffer(buffer, i + 1);
-        return result;
-    }
-
-    private static String unescapeString(String input) {
-        StringBuilder out = new StringBuilder();
-        char[] chars = input.toCharArray();
-        for (int i = 0; i < chars.length; i++) {
-            if ((int) chars[i] <= 0x1f) {
-                throw new ParseException("Unexpected control character");
-            }
-            if (chars[i] == '\\') {
-                if (escapedCharacters.indexOf(chars[i + 1]) >= 0) {
-                    out.append(escapedSequence.charAt(escapedCharacters.indexOf(chars[i + 1])));
-                    i++;
-                } else if (chars[i + 1] == 'u') {
-                    char first = (char) Integer.parseInt(input.substring(i + 2, i + 2 + 4), 16);
-
-                    if (chars.length - i - 6 >= 6) {
-                        if (chars[i + 6] == '\\' && chars[i + 7] == 'u') {
-                            char second = (char) Integer.parseInt(input.substring(i + 2 + 6, i + 2 + 4 + 6), 16);
-
-                            if (Character.isSurrogatePair(first, second)) {
-                                out.append(Character.toChars(Character.toCodePoint(first, second)));
-                                i += 11;
-                            }
-                        }
-                    } else {
-                        out.append(Character.toChars(first));
-                        i += 5;
-                    }
-
+        StringBuilder builder = new StringBuilder();
+        boolean process = true;
+        while (process && buffer.remaining() > 0) {
+            char thisChar = buffer.get();
+            if (thisChar == '\\') {
+                char nextChar = buffer.get();
+                if (escapedCharacters.indexOf(nextChar) >= 0) {
+                    builder.append(escapedSequence.charAt(escapedCharacters.indexOf(nextChar)));
+                } else if (nextChar == 'u') {
+                    char[] hex = new char[4];
+                    buffer.get(hex);
+                    builder.append((char) Integer.parseInt(new String(hex), 16));
                 } else {
-                    throw new ParseException("Unexpected backslash character");
+                    throw new ParseException("Unexpected escape character");
                 }
+            } else if (thisChar == '"') {
+                process = false;
             } else {
-                out.append(chars[i]);
+                builder.append(thisChar);
             }
         }
-        return out.toString();
+        return new JsonString(builder.toString());
     }
 
     private static void skipBuffer(Buffer buffer, int count) {
         buffer.position(buffer.position() + count);
-    }
-
-    @FunctionalInterface
-    private interface NameProvider {
-        String getName();
-    }
-
-    private static class Marker {
-
-        private final NameProvider nameProvider;
-
-        Marker(NameProvider nameProvider) {
-            this.nameProvider = nameProvider;
-        }
-
-        @Override
-        public String toString() {
-            return nameProvider.getName();
-        }
     }
 
 }

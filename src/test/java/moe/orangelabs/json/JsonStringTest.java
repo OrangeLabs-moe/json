@@ -1,9 +1,10 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonString;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static moe.orangelabs.json.JsonType.ARRAY;
+import static moe.orangelabs.json.JsonType.STRING;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class JsonStringTest {
@@ -40,9 +41,7 @@ public class JsonStringTest {
     }
 
     @Test(dataProvider = "decoding")
-    public void testDecoding(int testNumber, String input, String expected) {
-        //here we try to parse string as it was part of array
-        assertThat(Json.parse("[" + input + "]").getAsArray().get(0).getAsString().string)
-                .isEqualTo(expected);
+    public void testParsing(int testNumber, String input, String expected) {
+        assertThat(Json.parse(input).getAsString().string).isEqualTo(expected);
     }
 }

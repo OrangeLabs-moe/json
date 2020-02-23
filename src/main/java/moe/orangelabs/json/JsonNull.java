@@ -1,10 +1,10 @@
-package moe.orangelabs.json.types;
+package moe.orangelabs.json;
 
-import moe.orangelabs.json.Json;
-import moe.orangelabs.json.JsonCastException;
-import moe.orangelabs.json.JsonType;
+import moe.orangelabs.json.exceptions.JsonCastException;
 
-public final class JsonNull implements Json {
+public final class JsonNull extends Json {
+
+    public static final JsonNull NULL = new JsonNull();
 
     @Override
     public JsonType getType() {

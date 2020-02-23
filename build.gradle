@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id "com.github.ben-manes.versions" version "0.27.0"
     id 'jacoco'
+    id "me.champeau.gradle.jmh" version "0.5.0"
 }
 
 targetCompatibility = '1.8'
@@ -24,9 +25,22 @@ jacocoTestReport {
 }
 
 dependencies {
-    testImplementation 'org.assertj:assertj-core:3.14.0'
+    testImplementation 'org.assertj:assertj-core:3.15.0'
     testImplementation 'org.slf4j:slf4j-simple:1.7.26'
     testImplementation 'org.testng:testng:7.1.0'
+
+    jmh 'com.google.code.gson:gson:2.8.6'
+    jmh 'com.googlecode.json-simple:json-simple:1.1.1'
+    jmh 'org.json:json:20190722'
+    jmh 'com.eclipsesource.minimal-json:minimal-json:0.9.5'
+}
+
+tasks.getByName('jmhJar').doFirst() { duplicatesStrategy(DuplicatesStrategy.EXCLUDE) }
+jmh {
+    duplicateClassesStrategy = 'exclude'
+    resultFormat = 'JSON'
+    benchmarkMode = ["avgt", "sample", "ss"]
+//    benchmarkMode = ["ss"]
 }
 
 task sourcesJar(type: Jar) {

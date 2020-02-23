@@ -1,23 +1,16 @@
-package moe.orangelabs.json.types;
+package moe.orangelabs.json;
 
-import moe.orangelabs.json.Json;
-import moe.orangelabs.json.JsonCastException;
-import moe.orangelabs.json.JsonNotFoundException;
-import moe.orangelabs.json.JsonType;
+import moe.orangelabs.json.exceptions.JsonCastException;
+import moe.orangelabs.json.exceptions.JsonNotFoundException;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.requireNonNull;
-import static moe.orangelabs.json.Json.toJson;
 import static moe.orangelabs.json.JsonType.OBJECT;
 
-public final class JsonObject implements Map<JsonString, Json>, Json {
+public final class JsonObject extends Json implements Map<JsonString, Json> {
 
-    private static final Object MAP_START_TOKEN = new Object();
-    private static final Object MAP_END_TOKEN = new Object();
-    private static final Object KEY_VALUE_SEPARATOR_TOKEN = new Object();
-    private static final Object ENTRY_SEPARATOR_TOKEN = new Object();
 
     private final Map<JsonString, Json> map = new HashMap<>();
 
@@ -151,46 +144,31 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
         return this;
     }
 
-    public List<Object> deepStringTokenize() {
-        List<Object> tokenList = new LinkedList<>();
-        tokenList.add(MAP_START_TOKEN);
-        Iterator<Entry<JsonString, Json>> entryIterator = map.entrySet().iterator();
-        while (entryIterator.hasNext()) {
-            Entry<JsonString, Json> entry = entryIterator.next();
-            tokenList.add(entry.getKey());
-            tokenList.add(KEY_VALUE_SEPARATOR_TOKEN);
-            if (entry.getValue().isObject()) {
-                tokenList.addAll(entry.getValue().getAsObject().deepStringTokenize());
+    @Override
+    List<Object> deepStringTokenize() {
+        List<Object> tokens = new LinkedList<>();
+        tokens.add(OBJECT_START_TOKEN);
+        int processed = 0;
+        for (Entry<JsonString, Json> entry : map.entrySet()) {
+            tokens.add(entry.getKey());
+            tokens.add(KEY_VALUE_SEPARATOR_TOKEN);
+            tokens.add(entry.getValue());
+            if (processed < map.entrySet().size() - 1) {
+                tokens.add(ENTRY_SEPARATOR_TOKEN);
             } else {
-                tokenList.add(entry.getValue());
+                tokens.add(OBJECT_END_TOKEN);
             }
-            if (entryIterator.hasNext()) {
-                tokenList.add(ENTRY_SEPARATOR_TOKEN);
-            }
+            processed++;
         }
-        tokenList.add(MAP_END_TOKEN);
-        return tokenList;
+        if (map.size() == 0) {
+            tokens.add(OBJECT_END_TOKEN);
+        }
+        return tokens;
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder();
-        deepStringTokenize()
-                .forEach(
-                        o -> {
-                            if (o == MAP_START_TOKEN) {
-                                builder.append("{");
-                            } else if (o == MAP_END_TOKEN) {
-                                builder.append("}");
-                            } else if (o == KEY_VALUE_SEPARATOR_TOKEN) {
-                                builder.append(":");
-                            } else if (o == ENTRY_SEPARATOR_TOKEN) {
-                                builder.append(",");
-                            } else {
-                                builder.append(o.toString());
-                            }
-                        });
-        return builder.toString();
+        return Json.toString(deepStringTokenize());
     }
 
     /**
@@ -201,19 +179,6 @@ public final class JsonObject implements Map<JsonString, Json>, Json {
         JsonObject map = new JsonObject();
         forEach(map::put);
         return map;
-    }
-
-    public JsonObject deepClone() {
-        JsonObject result = new JsonObject();
-        forEach(
-                (key, value) -> {
-                    if (value.isObject()) {
-                        result.put(key, value.getAsObject().deepClone());
-                    } else {
-                        result.put(key, value);
-                    }
-                });
-        return result;
     }
 
     public JsonObject getObject(Object key) throws JsonNotFoundException, JsonCastException {

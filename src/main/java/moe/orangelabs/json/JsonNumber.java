@@ -1,14 +1,12 @@
-package moe.orangelabs.json.types;
+package moe.orangelabs.json;
 
-import moe.orangelabs.json.Json;
-import moe.orangelabs.json.JsonCastException;
-import moe.orangelabs.json.JsonType;
+import moe.orangelabs.json.exceptions.JsonCastException;
 
 import java.math.BigDecimal;
 
 import static java.util.Objects.requireNonNull;
 
-public final class JsonNumber implements Comparable<JsonNumber>, Json {
+public final class JsonNumber extends Json implements Comparable<JsonNumber> {
 
     public final BigDecimal value;
 
@@ -21,8 +19,7 @@ public final class JsonNumber implements Comparable<JsonNumber>, Json {
     }
 
     public JsonNumber(BigDecimal value) {
-        requireNonNull(value);
-        this.value = value;
+        this.value = requireNonNull(value);
     }
 
     public JsonNumber(String value) {
@@ -61,16 +58,30 @@ public final class JsonNumber implements Comparable<JsonNumber>, Json {
 
     @Override
     public int compareTo(JsonNumber o) {
-        return value.compareTo(requireNonNull(o).value);
+        return value.compareTo(o.value);
     }
 
-    public JsonNumber add(JsonNumber value) {
-        requireNonNull(value);
-        return new JsonNumber(this.value.add(value.value));
+    public int intValue() {
+        return value.intValue();
     }
 
-    public JsonNumber substract(JsonNumber value) {
-        requireNonNull(value);
-        return new JsonNumber(this.value.subtract(value.value));
+    public float floatValue() {
+        return value.floatValue();
+    }
+
+    public double doubleValue() {
+        return value.doubleValue();
+    }
+
+    public byte byteValue() {
+        return value.byteValue();
+    }
+
+    public short shortValue() {
+        return value.shortValue();
+    }
+
+    public long longValue() {
+        return value.longValue();
     }
 }

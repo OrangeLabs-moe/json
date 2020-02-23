@@ -1,37 +1,13 @@
 package moe.orangelabs.json;
 
-import moe.orangelabs.json.types.JsonArray;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static moe.orangelabs.json.Json.*;
+import static moe.orangelabs.json.JsonType.ARRAY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class JsonArrayTest {
-
-    @Test
-    public void testType() {
-        assertThat(new JsonArray().getType()).isEqualTo(JsonType.ARRAY);
-
-
-        assertThat(new JsonArray().isArray()).isTrue();
-
-        assertThat(new JsonArray().isBoolean()).isFalse();
-        assertThat(new JsonArray().isNumber()).isFalse();
-        assertThat(new JsonArray().isNull()).isFalse();
-        assertThat(new JsonArray().isObject()).isFalse();
-        assertThat(new JsonArray().isString()).isFalse();
-
-
-        assertThat(new JsonArray().getAsArray()).isExactlyInstanceOf(JsonArray.class);
-
-        assertThatThrownBy(() -> new JsonArray().getAsBoolean()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonArray().getAsNumber()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonArray().getAsNull()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonArray().getAsObject()).isExactlyInstanceOf(JsonCastException.class);
-        assertThatThrownBy(() -> new JsonArray().getAsString()).isExactlyInstanceOf(JsonCastException.class);
-    }
 
     @Test
     public void test() {
@@ -92,7 +68,7 @@ public class JsonArrayTest {
         assertThat(array.getArray(1)).isEqualTo(array(1, 2, 3));
         assertThat(array.getString(2)).isEqualTo(string("string"));
         assertThat(array.getNumber(3)).isEqualTo(number(123));
-        assertThat(array.getBoolean(4)).isEqualTo(TRUE);
-        assertThat(array.getBoolean(5)).isEqualTo(FALSE);
+        assertThat(array.getBoolean(4)).isEqualTo(JsonBoolean.TRUE);
+        assertThat(array.getBoolean(5)).isEqualTo(JsonBoolean.FALSE);
     }
 }
