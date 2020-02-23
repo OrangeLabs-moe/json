@@ -28,7 +28,7 @@ public final class JsonString extends Json {
 
     @Override
     public String toString() {
-        StringBuilder out = new StringBuilder();
+        StringBuilder out = new StringBuilder("\"");
         string.chars().forEachOrdered(value -> {
             char thisChar = (char) value;
             int index;
@@ -39,6 +39,7 @@ public final class JsonString extends Json {
                 out.append(escaped.charAt(index));
             }
         });
+        out.append('\"');
         return out.toString();
     }
 

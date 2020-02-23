@@ -1,3 +1,7 @@
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
 plugins {
     id 'java-library'
     id 'maven-publish'
@@ -23,6 +27,9 @@ test {
     useTestNG()
     jacoco {
         enabled = true
+    }
+    testLogging {
+        exceptionFormat = 'full'
     }
 }
 
@@ -59,15 +66,14 @@ task javadocJar(type: Jar) {
     archiveClassifier = 'javadoc'
 }
 
+group 'moe.orangelabs'
+version System.getenv("GITHUB_REF") == null
+        ? ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("YYYY.MM.dd.HH.mm.ss"))+"-nightly"
+        : System.getenv("GITHUB_REF").split("/").last()
+
 publishing {
     publications {
         maven(MavenPublication) {
-            group 'moe.orangelabs'
-            artifactId 'json'
-            version System.getenv("GITHUB_REF") == null ?
-                    new Date().getTime() + '-SNAPSHOT' :
-                    System.getenv("GITHUB_REF").split("/").last()
-
             from components.java
             artifact sourcesJar
             artifact javadocJar
@@ -76,6 +82,7 @@ publishing {
 
     repositories {
         maven {
+            name = "PublicS3"
             System.setProperty("org.gradle.s3.endpoint", "https://maven.orangelabs.moe.storage.yandexcloud.net/")
             def releasesRepoUrl = "s3://releases"
             def snapshotsRepoUrl = "s3://snapshots"
@@ -83,6 +90,17 @@ publishing {
             credentials(AwsCredentials) {
                 accessKey System.getenv("AWS_ACCESS_KEY_ID")
                 secretKey System.getenv("AWS_SECRET_ACCESS_KEY")
+            }
+        }
+        maven {
+            name = "Bintray"
+            def releasesRepoUrl = "https://api.bintray.com/maven/orangelabs-moe/releases/${project.name}/;publish=1"
+            def snapshotsRepoUrl = "https://api.bintray.com/maven/orangelabs-moe/snapshots/${project.name}/;publish=1"
+            println "v" + getVersion()
+            url = version.endsWith('nightly') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username System.getenv("BINTRAY_USERNAME")
+                password System.getenv("BINTRAY_API_TOKEN")
             }
         }
     }
