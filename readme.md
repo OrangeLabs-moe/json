@@ -19,7 +19,7 @@ jsonObjectWithLoop.toStringAsync().get(2, TimeUnit.SECONDS);
 
 ```groovy
 maven {
-    url 'https://maven.orangelabs.moe/releases/'
+    url 'https://maven.orangelabs.moe/'
 }
 
 dependencies {
