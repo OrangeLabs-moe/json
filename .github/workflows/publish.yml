@@ -2,11 +2,6 @@ on:
   push:
     tags:
       - '*'
-    branches:
-      - 'master'
-  #publish snapshots
-  schedule:
-    - cron:  '1 0 * * *'
 name: Publish
 jobs:
   check:
