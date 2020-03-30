@@ -27,14 +27,6 @@ dependencies {
 }
 ```
 
-```xml
-<dependency>
-  <groupId>com.eclipsesource.minimal-json</groupId>
-  <artifactId>minimal-json</artifactId>
-  <version>5.0</version>
-</dependency>
-```
-
 ## Benchmarking
 
 `./gradlew clean jmh --stacktrace --no-daemon --console=plain`
