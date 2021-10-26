@@ -5,8 +5,13 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Check
-      uses: OrangeLabs-moe/gradle-actions@v5.0-openjdk-8
-      with:
-        args: test --stacktrace
+      - uses: actions/checkout@master
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Test
+        run: ./gradlew test

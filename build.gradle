@@ -81,22 +81,11 @@ publishing {
 
     repositories {
         maven {
-            name = "SnapshotsS3"
-            System.setProperty("org.gradle.s3.endpoint", "https://storage.yandexcloud.net")
-            url = "s3://maven-snapshots.orangelabs.moe"
-            credentials(AwsCredentials) {
-                accessKey System.getenv("AWS_ACCESS_KEY_ID")
-                secretKey System.getenv("AWS_SECRET_ACCESS_KEY")
-            }
-        }
-        if (!version.endsWith('UNSTABLE')) {
-            maven {
-                name = "Bintray"
-                url = "https://api.bintray.com/maven/orangelabs-moe/releases/${project.name}/;publish=1"
-                credentials {
-                    username System.getenv("BINTRAY_USERNAME")
-                    password System.getenv("BINTRAY_API_TOKEN")
-                }
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/orangelabsmoe/json")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
             }
         }
     }
