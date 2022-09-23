@@ -1,0 +1,20 @@
+package com.github.ram042.json.exceptions;
+
+public class JsonNotFoundException extends RuntimeException {
+
+    public JsonNotFoundException() {
+        super();
+    }
+
+    public JsonNotFoundException(String message) {
+        super(message);
+    }
+
+    public JsonNotFoundException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public JsonNotFoundException(Throwable cause) {
+        super(cause);
+    }
+}
