@@ -5,9 +5,8 @@ import java.time.format.DateTimeFormatter
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id "com.github.ben-manes.versions" version "0.27.0"
+    id "com.github.ben-manes.versions" version "0.47.0"
     id 'jacoco'
-    id "me.champeau.gradle.jmh" version "0.5.0"
 }
 
 group 'com.github.ram042'
@@ -15,8 +14,10 @@ version System.getenv("GITHUB_REF") != null && System.getenv("GITHUB_REF").start
         ? System.getenv("GITHUB_REF").split("/").last()
         : ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("YYYY.MM.dd.HH.mm.ss")) + "-UNSTABLE"
 
-targetCompatibility = '1.8'
-sourceCompatibility = '1.8'
+java {
+    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
@@ -34,6 +35,7 @@ test {
     testLogging {
         exceptionFormat = 'full'
     }
+    systemProperty 'org.slf4j.simpleLogger.logFile', 'System.out'
 }
 
 jacocoTestReport {
@@ -41,22 +43,9 @@ jacocoTestReport {
 }
 
 dependencies {
-    testImplementation 'org.assertj:assertj-core:3.15.0'
-    testImplementation 'org.slf4j:slf4j-simple:1.7.26'
-    testImplementation 'org.testng:testng:7.1.0'
-
-    jmh 'com.google.code.gson:gson:2.8.6'
-    jmh 'com.googlecode.json-simple:json-simple:1.1.1'
-    jmh 'org.json:json:20190722'
-    jmh 'com.eclipsesource.minimal-json:minimal-json:0.9.5'
-}
-
-tasks.getByName('jmhJar').doFirst() { duplicatesStrategy(DuplicatesStrategy.EXCLUDE) }
-jmh {
-    duplicateClassesStrategy = 'exclude'
-    resultFormat = 'JSON'
-    benchmarkMode = ["avgt", "sample", "ss"]
-//    benchmarkMode = ["ss"]
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+    testImplementation 'org.slf4j:slf4j-simple:2.0.7'
+    testImplementation 'org.testng:testng:7.5.1'
 }
 
 task sourcesJar(type: Jar) {
@@ -68,7 +57,6 @@ task javadocJar(type: Jar) {
     from javadoc
     archiveClassifier = 'javadoc'
 }
-
 
 publishing {
     publications {

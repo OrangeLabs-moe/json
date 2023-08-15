@@ -202,7 +202,7 @@ public class JsonArray extends Json implements List<Json> {
     }
 
     @Override
-    List<Object> deepStringTokenize() {
+    List<Object> tokenize() {
         List<Object> tokens = new LinkedList<>();
         tokens.add(ARRAY_START_TOKEN);
         for (int i = 0; i < array.size(); i++) {
@@ -214,7 +214,7 @@ public class JsonArray extends Json implements List<Json> {
             }
 
         }
-        if (array.size() == 0) {
+        if (array.isEmpty()) {
             tokens.add(ARRAY_END_TOKEN);
         }
         return tokens;
@@ -222,6 +222,6 @@ public class JsonArray extends Json implements List<Json> {
 
     @Override
     public String toString() {
-        return Json.toString(deepStringTokenize());
+        return Json.toString(this);
     }
 }

@@ -5,9 +5,9 @@ import com.github.ram042.json.exceptions.ParseException;
 import java.nio.Buffer;
 import java.nio.CharBuffer;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Stack;
 
+import static com.github.ram042.json.Json.*;
 import static java.util.Objects.requireNonNull;
 
 final class JsonParser {
@@ -26,11 +26,11 @@ final class JsonParser {
     private JsonParser() {
     }
 
-    public static Json decode(String data) {
-        requireNonNull(data);
-        data = data.trim();
-        LinkedList<Object> tokens = tokenize(CharBuffer.wrap(data));
-        if (tokens.get(0) == Json.OBJECT_START_TOKEN || tokens.get(0) == Json.ARRAY_START_TOKEN) {
+    static Json parse(String json) {
+        requireNonNull(json);
+        json = json.trim();
+        LinkedList<Object> tokens = tokenize(CharBuffer.wrap(json));
+        if (tokens.get(0) == OBJECT_START_TOKEN || tokens.get(0) == ARRAY_START_TOKEN) {
             return parseStructure(tokens);
         } else if (tokens.size() == 1 && tokens.get(0) instanceof Json) {
             return (Json) tokens.get(0);
@@ -52,27 +52,27 @@ final class JsonParser {
                     break;
                 case '{':
                     buffer.get();
-                    tokens.add(Json.OBJECT_START_TOKEN);
+                    tokens.add(OBJECT_START_TOKEN);
                     break;
                 case '}':
                     buffer.get();
-                    tokens.add(Json.OBJECT_END_TOKEN);
+                    tokens.add(OBJECT_END_TOKEN);
                     break;
                 case '[':
                     buffer.get();
-                    tokens.add(Json.ARRAY_START_TOKEN);
+                    tokens.add(ARRAY_START_TOKEN);
                     break;
                 case ']':
                     buffer.get();
-                    tokens.add(Json.ARRAY_END_TOKEN);
+                    tokens.add(ARRAY_END_TOKEN);
                     break;
                 case ':':
                     buffer.get();
-                    tokens.add(Json.KEY_VALUE_SEPARATOR_TOKEN);
+                    tokens.add(KEY_VALUE_SEPARATOR_TOKEN);
                     break;
                 case ',':
                     buffer.get();
-                    tokens.add(Json.ENTRY_SEPARATOR_TOKEN);
+                    tokens.add(ENTRY_SEPARATOR_TOKEN);
                     break;
                 default:
                     tokens.add(fromStringSimple(buffer));
@@ -83,148 +83,119 @@ final class JsonParser {
         return tokens;
     }
 
-    private static int checkOpenCloseTokens(List<Object> tokens) {
-        int objectStartCount = 0;
-        int objectEndCount = 0;
-        int arrayStartsCount = 0;
-        int arrayEndsCount = 0;
-
-        for (Object o : tokens) {
-            if (o == Json.OBJECT_START_TOKEN) {
-                objectStartCount++;
-            }
-            if (o == Json.OBJECT_END_TOKEN) {
-                objectEndCount++;
-            }
-            if (o == Json.ARRAY_START_TOKEN) {
-                arrayStartsCount++;
-            }
-            if (o == Json.ARRAY_END_TOKEN) {
-                arrayEndsCount++;
-            }
-        }
-        if (objectStartCount != objectEndCount || arrayStartsCount != arrayEndsCount) {
-            throw new ParseException("Unequal count of open/close brackets");
-        }
-        return objectStartCount + arrayStartsCount;
-    }
-
     private static Json parseStructure(LinkedList<Object> tokens) {
         final Stack<Json> stack = new Stack<>();
-        stack.ensureCapacity(checkOpenCloseTokens(tokens));
-
+//        stack.ensureCapacity(checkOpenCloseTokens(tokens));
         Json root;
 
-        if (tokens.get(0) == Json.OBJECT_START_TOKEN) {
+        Object firstToken = tokens.removeFirst();
+        if (firstToken == OBJECT_START_TOKEN) {
             root = stack.push(new JsonObject());
-            tokens.removeFirst();
-        } else if (tokens.get(0) == Json.ARRAY_START_TOKEN) {
+        } else if (firstToken == ARRAY_START_TOKEN) {
             root = stack.push(new JsonArray());
-            tokens.removeFirst();
         } else {
             throw new ParseException("Expected structure");
         }
 
-        while (tokens.size() > 0) {
-            Json last = stack.peek();
-            if (last.isArray()) {
-                JsonArray lastArray = last.getAsArray();
-                Object first = tokens.removeFirst();
-
-                if (first instanceof Json) {
-                    lastArray.add((Json) first);
-
-                    if (tokens.size() == 0) {
-                        throw new ParseException("Unexpected end");
-                    }
-                    Object nextToken = tokens.getFirst();
-                    if (nextToken == Json.ENTRY_SEPARATOR_TOKEN) {
-                        if (tokens.size() < 2) {
-                            throw new ParseException("Expected more tokens");
-                        }
-                        Object nextNextToken = tokens.get(1);
-                        if (!(nextNextToken instanceof Json || nextNextToken == Json.OBJECT_START_TOKEN || nextNextToken == Json.ARRAY_START_TOKEN)) {
-                            throw new ParseException("Unexpected value");
-                        }
-                        tokens.removeFirst();
-                    } else if (nextToken != Json.ARRAY_END_TOKEN) {
-                        throw new ParseException("Unexpected token");
-                    }
-
-                } else if (first == Json.ARRAY_START_TOKEN) {
-                    lastArray.add(stack.push(new JsonArray()));
-                } else if (first == Json.OBJECT_START_TOKEN) {
-                    lastArray.add(stack.push(new JsonObject()));
-                } else if (first == Json.ARRAY_END_TOKEN) {
-                    stack.pop();
-                    if (tokens.size() > 0 && tokens.getFirst() == Json.ENTRY_SEPARATOR_TOKEN) {
-                        tokens.removeFirst();
-                    }
-                } else {
-                    throw new ParseException("Expected json/arrayEnd/arrayStart/object/start");
-                }
-            } else if (last.isObject()) {
-                JsonObject lastObject = last.getAsObject();
-                Object first = tokens.removeFirst();
-
-                if (first instanceof Json) {
-                    if (tokens.size() < 3) {
-                        throw new ParseException("Expected more tokens");
-                    }
-
-                    JsonString key;
-                    if (((Json) first).isString()) {
-                        key = (JsonString) first;
-                    } else {
-                        throw new ParseException("Key must be string");
-                    }
-
-                    if (tokens.removeFirst() != Json.KEY_VALUE_SEPARATOR_TOKEN) {
-                        throw new ParseException("Expected ':'");
-                    }
-
-                    Object value = tokens.removeFirst();
-                    if (value instanceof Json) {
-                        lastObject.put(key, (Json) value);
-
-                        if (tokens.size() == 0) {
-                            throw new ParseException("Unexpected end");
-                        }
-                        Object nextToken = tokens.getFirst();
-                        if (nextToken == Json.ENTRY_SEPARATOR_TOKEN) {
-                            if (tokens.size() < 2) {
-                                throw new ParseException("Expected more tokens");
-                            }
-                            Object nextNextToken = tokens.get(1);
-                            if (!(nextNextToken instanceof Json || nextNextToken == Json.OBJECT_START_TOKEN || nextNextToken == Json.ARRAY_START_TOKEN)) {
-                                throw new ParseException("Unexpected value");
-                            }
-                            tokens.removeFirst();
-                        } else if (nextToken != Json.OBJECT_END_TOKEN) {
-                            throw new ParseException("Unexpected token");
-                        }
-
-                    } else if (value == Json.OBJECT_START_TOKEN) {
-                        lastObject.put(key, stack.push(new JsonObject()));
-                    } else if (value == Json.ARRAY_START_TOKEN) {
-                        lastObject.put(key, stack.push(new JsonArray()));
-                    } else {
-                        throw new ParseException("Expected value");
-                    }
-                } else if (first == Json.OBJECT_END_TOKEN) {
-                    stack.pop();
-                    if (tokens.size() > 0 && tokens.get(0) == Json.ENTRY_SEPARATOR_TOKEN) {
-                        tokens.remove(0);
-                    }
-                } else {
-                    throw new ParseException("Unexpected token");
-                }
+        while (!tokens.isEmpty()) {
+            Json current = stack.peek();
+            if (current.isArray()) {
+                collectArray(stack, tokens);
+            } else if (current.isObject()) {
+                collectObject(stack, tokens);
             } else {
                 throw new ParseException("Expected structure");
             }
         }
+        if (!stack.isEmpty()) {
+            throw new ParseException("Last element not closed");
+        }
 
         return root;
+    }
+
+    private static void collectArray(Stack<Json> stack, LinkedList<Object> tokens) {
+        JsonArray array = stack.peek().getAsArray();
+        while (!tokens.isEmpty()) {
+            Object next = tokens.removeFirst();
+            if (next instanceof Json) {
+                array.add((Json) next);
+                next = tokens.getFirst();
+                if (next == ENTRY_SEPARATOR_TOKEN) {
+                    tokens.removeFirst();
+                } else if (next != ARRAY_END_TOKEN) {
+                    throw new IllegalArgumentException("Unexpected token");
+                }
+            } else if (next == ARRAY_END_TOKEN) {
+                stack.pop();
+                if (!stack.isEmpty()) {
+                    next = tokens.getFirst();
+                    if (next == ENTRY_SEPARATOR_TOKEN) {
+                        tokens.removeFirst();
+                    }
+                }
+                return;
+            } else if (next == ARRAY_START_TOKEN) {
+                JsonArray newArray = new JsonArray();
+                array.add(stack.push(newArray));
+                return;
+            } else if (next == OBJECT_START_TOKEN) {
+                JsonObject newObject = new JsonObject();
+                array.add(stack.push(newObject));
+                return;
+            } else {
+                throw new IllegalArgumentException("Unexpected token");
+            }
+        }
+    }
+
+    private static void collectObject(Stack<Json> stack, LinkedList<Object> tokens) {
+        JsonObject object = stack.peek().getAsObject();
+        while (!tokens.isEmpty()) {
+            Object next = tokens.removeFirst();
+            if (next instanceof JsonString) {
+                JsonString key = ((JsonString) next).getAsString();
+                if (tokens.removeFirst() != KEY_VALUE_SEPARATOR_TOKEN) {
+                    throw new ParseException("Unexpected token");
+                }
+
+                next = tokens.removeFirst();
+                if (next instanceof Json) {
+                    Json value = (Json) next;
+                    object.put(key, value);
+
+                    next = tokens.getFirst();
+                    if (next == ENTRY_SEPARATOR_TOKEN) {
+                        tokens.removeFirst();
+                    } else if (next != OBJECT_END_TOKEN) {
+                        throw new IllegalArgumentException("Unexpected token");
+                    }
+                } else if (next == ARRAY_START_TOKEN) {
+                    JsonArray value = new JsonArray();
+                    stack.push(value);
+                    object.put(key, value);
+                    return;
+                } else if (next == OBJECT_START_TOKEN) {
+                    JsonObject value = new JsonObject();
+                    stack.push(value);
+                    object.put(key, value);
+                    return;
+                } else {
+                    throw new ParseException("Unexpected token");
+                }
+            } else if (next == OBJECT_END_TOKEN) {
+                stack.pop();
+                if (!stack.isEmpty()) {
+                    next = tokens.getFirst();
+                    if (next == ENTRY_SEPARATOR_TOKEN) {
+                        tokens.removeFirst();
+                    }
+                }
+                return;
+            } else {
+                throw new IllegalArgumentException("Unexpected token");
+            }
+        }
     }
 
     private static boolean charBufferStartsWith(CharBuffer buffer, char[] chars) {

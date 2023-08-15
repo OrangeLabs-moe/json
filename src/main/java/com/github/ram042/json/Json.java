@@ -5,9 +5,8 @@ import com.github.ram042.json.exceptions.JsonCastException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.github.ram042.json.Json.InternalType.COMPLEX;
 import static com.github.ram042.json.Json.InternalType.PRIMITIVE;
@@ -21,8 +20,32 @@ public abstract class Json implements Cloneable {
     static final Marker ARRAY_END_TOKEN = new Marker(() -> "]");
     static final Marker ARRAY_START_TOKEN = new Marker(() -> "[");
 
-    public static Json parse(String data) {
-        return JsonParser.decode(data);
+    public static Json parse(String json) {
+        return JsonParser.parse(json);
+    }
+
+    public static JsonObject parseObject(String json) {
+        return parse(json).getAsObject();
+    }
+
+    public static JsonArray parseArray(String json) {
+        return parse(json).getAsArray();
+    }
+
+    public static JsonNumber parseNumber(String json) {
+        return parse(json).getAsNumber();
+    }
+
+    public static JsonString parseString(String json) {
+        return parse(json).getAsString();
+    }
+
+    public static JsonBoolean parseBoolean(String json) {
+        return parse(json).getAsBoolean();
+    }
+
+    public static JsonNull parseNull(String json) {
+        return parse(json).getAsNull();
     }
 
     /**
@@ -156,29 +179,38 @@ public abstract class Json implements Cloneable {
         return getType().equals(JsonType.STRING);
     }
 
-    static String toString(List<Object> tokens) {
+    static String toString(Json json) {
+        Set<Json> processedSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        LinkedList<String> tokens = new LinkedList<>();
         Stack<List<Object>> stack = new Stack<>();
-        stack.push(tokens);
-        StringBuilder builder = new StringBuilder();
-        while (stack.size() > 0) {
+
+        processedSet.add(json);
+        stack.push(json.tokenize());
+
+        while (!stack.isEmpty()) {
             List<Object> list = stack.peek();
-            while (list.size() > 0) {
+            while (!list.isEmpty()) {
                 Object item = list.get(0);
 
                 if (item instanceof Json && ((Json) item).isComplex()) {
                     list.remove(0);
-                    stack.push(((Json) item).deepStringTokenize());
+                    if (processedSet.contains(item)) {
+                        throw new IllegalStateException("Loop found");
+                    }
+                    processedSet.add(json);
+                    stack.push(((Json) item).tokenize());
                     break;
                 }
 
-                builder.append(list.remove(0));
+                tokens.add(list.remove(0).toString());
             }
-            if (list.size() == 0) {
+            if (list.isEmpty()) {
                 stack.pop();
             }
         }
 
-        return builder.toString();
+        return tokens.parallelStream()
+                .collect(Collectors.joining());
     }
 
     InternalType getInternalType() {
@@ -194,7 +226,7 @@ public abstract class Json implements Cloneable {
         return getInternalType() == COMPLEX;
     }
 
-    List<Object> deepStringTokenize() {
+    List<Object> tokenize() {
         if (getInternalType() == COMPLEX) {
             throw new UnsupportedOperationException();
         }
@@ -203,14 +235,6 @@ public abstract class Json implements Cloneable {
 
     @Override
     abstract public Json clone();
-
-    /**
-     * Because toString() does not use recursion, object with loop will execute forever.
-     * Use this with to avoid such problems
-     */
-    public Future<String> toStringAsync() {
-        return CompletableFuture.supplyAsync(this::toString);
-    }
 
     enum InternalType {
         COMPLEX, PRIMITIVE

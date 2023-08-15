@@ -13,6 +13,8 @@ import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 
+import static com.github.ram042.json.Json.array;
+import static com.github.ram042.json.Json.object;
 import static com.github.ram042.json.JsonParseTest.ExpectedResult.*;
 import static org.assertj.core.api.Assertions.*;
 
@@ -23,35 +25,72 @@ public class JsonParseTest {
     @DataProvider(name = "parse")
     public Object[][] getParseData() {
         return new Object[][]{
-                {0, "{}", Json.object()},
-                {1, "{\"key\":\"value\"}", Json.object("key", "value")},
-                {2, "{\"int1\":14,\"int2\":-1}", Json.object("int1", 14, "int2", -1)},
-                {3,
+                {
+                        "{}",
+                        object()
+                },
+                {
+                        "[]",
+                        array()
+                },
+                {
+                        "[[]]",
+                        array(array())
+                },
+                {
+                        "{\"key\":\"value\"}",
+                        object("key", "value")
+                },
+                {
+                        "{\"int1\":14,\"int2\":-1}",
+                        object("int1", 14, "int2", -1)
+                },
+                {
                         "{\"a\":\"b\",\"c\":42,\"d\":\"e\",\"f\":[\"g\"],\"h\":\"e\"}",
-                        Json.object(
+                        object(
                                 "a", "b",
                                 "c", 42,
                                 "d", "e",
-                                "f", Json.array("g"),
+                                "f", array("g"),
                                 "h", "e"
                         )
                 },
-
-                {4, "[]", Json.array()},
-                {5, "[\"a\",\"b\",\"c\"]", Json.array("a", "b", "c")},
-                {6, "[true,false,null]", Json.array(true, false, null)},
-                {7, "[40.96]", Json.array(Json.number(new BigDecimal("40.96")))},
-                {8, "[81.92e+2]", Json.array(new BigDecimal(8192))}
+                {
+                        "[]", array()},
+                {
+                        "[\"a\",\"b\",\"c\"]",
+                        array("a", "b", "c")
+                },
+                {
+                        "[true,false,null]",
+                        array(true, false, null)
+                },
+                {
+                        "[40.96]",
+                        array(Json.number(new BigDecimal("40.96")))
+                },
+                {
+                        "[81.92e+2]",
+                        array(new BigDecimal(8192))
+                },
+                {
+                        "{\"object\": {}}",
+                        object("object", object())
+                },
+                {
+                        "{\"object with next\": {},\"next\": \"next\"}",
+                        object("object with next", object(), "next", "next")
+                },
         };
     }
 
     @Test(dataProvider = "parse")
-    public void parse(int testId, String input, Json expected) {
+    public void parse(String input, Json expected) {
         assertThat(Json.parse(input)).isEqualTo(expected);
     }
 
-    @DataProvider(name = "parseError")
-    public Object[][] getParseErrorData() {
+    @DataProvider(name = "getInvalidJson")
+    public Object[][] getInvalidJson() {
         return new Object[][]{
                 {"[}"},
                 {"{]"},
@@ -74,8 +113,8 @@ public class JsonParseTest {
         };
     }
 
-    @Test(dataProvider = "parseError")
-    public void parseError(String input) {
+    @Test(dataProvider = "getInvalidJson")
+    public void parseInvalid(String input) {
         assertThatThrownBy(() -> Json.parse(input));
     }
 

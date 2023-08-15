@@ -75,8 +75,7 @@ public class JsonTest {
         one.castAndPut("two", two);
         two.castAndPut("one", one);
 
-        assertThatThrownBy(() -> one.toStringAsync().get(2, TimeUnit.SECONDS))
-                .isExactlyInstanceOf(TimeoutException.class);
+        assertThatThrownBy(one::toString);
     }
 
     @DataProvider(name = "typeProvider")

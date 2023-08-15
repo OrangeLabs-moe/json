@@ -144,7 +144,7 @@ public final class JsonObject extends Json implements Map<JsonString, Json> {
     }
 
     @Override
-    List<Object> deepStringTokenize() {
+    List<Object> tokenize() {
         List<Object> tokens = new LinkedList<>();
         tokens.add(OBJECT_START_TOKEN);
         int processed = 0;
@@ -159,7 +159,7 @@ public final class JsonObject extends Json implements Map<JsonString, Json> {
             }
             processed++;
         }
-        if (map.size() == 0) {
+        if (map.isEmpty()) {
             tokens.add(OBJECT_END_TOKEN);
         }
         return tokens;
@@ -167,7 +167,7 @@ public final class JsonObject extends Json implements Map<JsonString, Json> {
 
     @Override
     public String toString() {
-        return Json.toString(deepStringTokenize());
+        return Json.toString(this);
     }
 
     /**
