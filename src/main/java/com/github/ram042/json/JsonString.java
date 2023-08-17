@@ -25,22 +25,34 @@ public final class JsonString extends Json {
         return this;
     }
 
-
     @Override
     public String toString() {
         StringBuilder out = new StringBuilder("\"");
-        string.chars().forEachOrdered(value -> {
-            char thisChar = (char) value;
+        for (char thisChar : string.toCharArray()) {
             int index;
-            if ((index = charactersToEscape.indexOf(thisChar)) < 0) {
-                out.append(thisChar);
+            if ((index = charactersToEscape.indexOf(thisChar)) >= 0 || thisChar <= 0x1f) {
+                if (index >= 0) {
+                    out.append('\\');
+                    out.append(escaped.charAt(index));
+                } else {
+                    out.append("\\u00");
+                    out.append(toHex(thisChar / 16));
+                    out.append(toHex(thisChar % 16));
+                }
             } else {
-                out.append('\\');
-                out.append(escaped.charAt(index));
+                out.append(thisChar);
             }
-        });
+        }
         out.append('\"');
         return out.toString();
+    }
+
+    private static char toHex(int i) {
+        if (i < 10) {
+            return (char) ('0' + i);
+        } else {
+            return (char) ('a' + i - 10);
+        }
     }
 
     @Override

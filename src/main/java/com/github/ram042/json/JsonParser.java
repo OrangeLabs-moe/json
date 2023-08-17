@@ -248,7 +248,9 @@ final class JsonParser {
         boolean process = true;
         while (process && buffer.remaining() > 0) {
             char thisChar = buffer.get();
-            if (thisChar == '\\') {
+            if (thisChar <= 0x1f) {
+                throw new ParseException("Unexpected escape character");
+            } else if (thisChar == '\\') {
                 char nextChar = buffer.get();
                 if (escapedCharacters.indexOf(nextChar) >= 0) {
                     builder.append(escapedSequence.charAt(escapedCharacters.indexOf(nextChar)));
